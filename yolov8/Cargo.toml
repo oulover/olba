@@ -1,0 +1,29 @@
+[package]
+name = "yolov8"
+version.workspace = true
+authors.workspace = true
+description.workspace = true
+documentation.workspace = true
+homepage.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+
+image = { workspace = true }
+
+candle-nn = { workspace = true }
+candle-core= { workspace = true ,features =["cuda"] }
+candle-onnx = { workspace = true }
+candle-transformers= { workspace = true }
+
+tracing = { workspace = true }
+tracing-chrome = { workspace = true }
+tracing-subscriber = { workspace = true }
+
+clap = {workspace = true}
+ab_glyph = {workspace = true}
+imageproc = { workspace = true }
+anyhow =  { workspace = true }
+
+hf-hub =  { workspace = true }
