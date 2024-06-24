@@ -69,17 +69,17 @@ fn main() -> ort::Result<()> {
 
     // 448（12800x1=>1x80x80x2 ）
     // output_448  shape[12800, 1]
-    let output_448_reshaped = output_448.into_shape([1,80,80,2]).unwrap(); // 重塑为 (80, 80, 2, 4)
+    let output_448_reshaped = output_448.into_shape([80,80,2]).unwrap(); // 重塑为 (80, 80, 2, 4)
     println!("output_448_reshaped  shape{:?}",output_448_reshaped.shape());
 
     // 451：  1x8x80x80 每一个分数对应的四个点(x1,y1,x2,y2)*注意这个点是距离原点的相对值，
     // output_451  shape[4, 12800]  == 51,200  ==  1x8x80x80
-    let output_451_reshaped = output_451.clone().into_shape([8,80,80]).unwrap();
-    println!("output_451_reshaped  shape{:?}",output_451_reshaped.shape());
+    // let output_451_reshaped = output_451.clone().into_shape([8,80,80]).unwrap();
+    // println!("output_451_reshaped  shape{:?}",output_451_reshaped.shape());
 
 
 
-    let x_all = output_448_reshaped.axis_iter(Axis(1));
+    let x_all = output_448_reshaped.axis_iter(Axis(0));
     for row in x_all{
         let row: Vec<_> = row.iter().copied().collect();
         let x1 = row[0] / 640. * (img_width as f32);
