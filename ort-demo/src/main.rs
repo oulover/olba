@@ -1,13 +1,20 @@
+// 忽略clippy警告，避免手动retain操作
 #![allow(clippy::manual_retain)]
 
 use std::path::Path;
 
+// 引入图像处理库
 use image::{GenericImageView, imageops::FilterType};
+// 引入ndarray库用于数组操作
 use ndarray::{Array, Axis, s};
+// 引入ONNX Runtime Rust绑定库
 use ort::{CUDAExecutionProvider, inputs, Session, SessionOutputs};
+// 引入raqote库用于绘图
 use raqote::{DrawOptions, DrawTarget, LineJoin, PathBuilder, SolidSource, Source, StrokeStyle};
+// 引入show_image库用于显示图像
 use show_image::{AsImageView, event, ImageInfo, ImageView, PixelFormat, WindowOptions};
 
+// 定义一个简单的边界框结构体
 #[derive(Debug, Clone, Copy)]
 struct BoundingBox {
     x1: f32,
@@ -16,42 +23,29 @@ struct BoundingBox {
     y2: f32,
 }
 
-fn intersection(box1: &BoundingBox, box2: &BoundingBox) -> f32 {
-    (box1.x2.min(box2.x2) - box1.x1.max(box2.x1)) * (box1.y2.min(box2.y2) - box1.y1.max(box2.y1))
-}
-
-fn union(box1: &BoundingBox, box2: &BoundingBox) -> f32 {
-    ((box1.x2 - box1.x1) * (box1.y2 - box1.y1)) + ((box2.x2 - box2.x1) * (box2.y2 - box2.y1)) - intersection(box1, box2)
-}
-
-// const YOLOV8M_URL: &str = "https://parcel.pyke.io/v2/cdn/assetdelivery/ortrsv2/ex_models/yolov8m.onnx";
-// const YOLOV8M_URL: &str = "D:\\temp\\aaa\\resnet18_imagenet.onnx";
-
-const YOLOV8M_URL: &str = "D:\\temp\\aaa\\yolov8m.onnx";
-#[rustfmt::skip]
-const YOLOV8_CLASS_LABELS: [&str; 80] = [
-    "person", "bicycle", "car", "motorcycle", "airplane", "bus", "train", "truck", "boat", "traffic light",
-    "fire hydrant", "stop sign", "parking meter", "bench", "bird", "cat", "dog", "horse", "sheep", "cow", "elephant",
-    "bear", "zebra", "giraffe", "backpack", "umbrella", "handbag", "tie", "suitcase", "frisbee", "skis", "snowboard",
-    "sports ball", "kite", "baseball bat", "baseball glove", "skateboard", "surfboard", "tennis racket", "bottle",
-    "wine glass", "cup", "fork", "knife", "spoon", "bowl", "banana", "apple", "sandwich", "orange", "broccoli",
-    "carrot", "hot dog", "pizza", "donut", "cake", "chair", "couch", "potted plant", "bed", "dining table", "toilet",
-    "tv", "laptop", "mouse", "remote", "keyboard", "cell phone", "microwave", "oven", "toaster", "sink", "refrigerator",
-    "book", "clock", "vase", "scissors", "teddy bear", "hair drier", "toothbrush"
-];
+// 指定模型的本地路径
+const DET_10G_URL: &str = "D:\\temp\\aaa\\buffalo_l\\det_10g.onnx";
 
 #[show_image::main]
 fn main() -> ort::Result<()> {
+    // 初始化日志记录器
     tracing_subscriber::fmt::init();
 
+    // 初始化ONNX Runtime环境，使用CUDA执行提供者
     ort::init()
         .with_execution_providers([CUDAExecutionProvider::default().build()])
         .commit()?;
-    let f = "D:\\temp\\aaa\\baseball.jpg";
+
+    // 打开图片文件
+    let f = "D:\\Temp\\aaa\\hg11.jpg";
     let original_img = image::open(Path::new(f)).unwrap();
+    // 获取原始图像的宽度和高度
     let (img_width, img_height) = (original_img.width(), original_img.height());
+    // 将图像缩放到模型要求的尺寸
     let img = original_img.resize_exact(640, 640, FilterType::CatmullRom);
+    // 创建一个用于模型输入的ndarray
     let mut input = Array::zeros((1, 3, 640, 640));
+    // 遍历每个像素，将其归一化后放入输入数组
     for pixel in img.pixels() {
         let x = pixel.0 as _;
         let y = pixel.1 as _;
@@ -61,79 +55,37 @@ fn main() -> ort::Result<()> {
         input[[0, 2, y, x]] = (b as f32) / 255.;
     }
 
-    let model = Session::builder()?.commit_from_file(YOLOV8M_URL)?;
+    // 加载ONNX模型
+    let model = Session::builder()?.commit_from_file(DET_10G_URL)?;
 
-    // Run YOLOv8 inference
-    let outputs: SessionOutputs = model.run(inputs!["images" => input.view()]?)?;
-    let output = outputs["output0"].try_extract_tensor::<f32>()?.t().into_owned();
+    // 运行面部检测推理
+    let outputs: SessionOutputs = model.run(inputs!["input.1" => input.view()]?)?;
+    // 提取输出张量并转置
+    let output = outputs["451"].try_extract_tensor::<f32>()?.t().into_owned();
 
+    // 解析输出结果，获取边界框
     let mut boxes = Vec::new();
-    let output = output.slice(s![.., .., 0]);
-    println!("output---{:?}", output);
     for row in output.axis_iter(Axis(0)) {
-        println!("row---{:?}", row);
         let row: Vec<_> = row.iter().copied().collect();
-        println!("row-Vec--{:?}", row);
-        let row22: Vec<_> = row.iter().copied().collect();
-        let row22: Vec<_> = row22
-            .iter()
-            // skip bounding box coordinates
-            .skip(4)
-            .enumerate()
-            .map(|(index, value)| (index, *value)).collect();
-        println!("row22-Vec--{:?}", row22);
-
-        let (class_id, prob) = row
-            .iter()
-            // skip bounding box coordinates
-            .skip(4)
-            .enumerate()
-            .map(|(index, value)| (index, *value))
-            .reduce(|accum, row| if row.1 > accum.1 { row } else { accum })
-            .unwrap();
-        if prob < 0.5 {
-            continue;
-        }
-        let label = YOLOV8_CLASS_LABELS[class_id];
-        let xc = row[0] / 640. * (img_width as f32);
-        let yc = row[1] / 640. * (img_height as f32);
-        let w = row[2] / 640. * (img_width as f32);
-        let h = row[3] / 640. * (img_height as f32);
-        boxes.push((
-            BoundingBox {
-                x1: xc - w / 2.,
-                y1: yc - h / 2.,
-                x2: xc + w / 2.,
-                y2: yc + h / 2.,
-            },
-            label,
-            prob
-        ));
+        // 将边界框坐标从归一化值转换回图像坐标系
+        let x1 = row[0] * (img_width as f32);
+        let y1 = row[1] * (img_height as f32);
+        let x2 = row[2] * (img_width as f32);
+        let y2 = row[3] * (img_height as f32);
+        // 将边界框添加到向量中
+        boxes.push(BoundingBox { x1, y1, x2, y2 });
     }
 
-    boxes.sort_by(|box1, box2| box2.2.total_cmp(&box1.2));
-    let mut result = Vec::new();
-
-    while !boxes.is_empty() {
-        result.push(boxes[0]);
-        boxes = boxes
-            .iter()
-            .filter(|box1| intersection(&boxes[0].0, &box1.0) / union(&boxes[0].0, &box1.0) < 0.7)
-            .copied()
-            .collect();
-    }
-
+    // 创建一个用于绘制的DrawTarget
     let mut dt = DrawTarget::new(img_width as _, img_height as _);
 
-    for (bbox, label, _confidence) in result {
+    // 遍历所有边界框，绘制矩形框
+    for bbox in boxes {
         let mut pb = PathBuilder::new();
         pb.rect(bbox.x1, bbox.y1, bbox.x2 - bbox.x1, bbox.y2 - bbox.y1);
         let path = pb.finish();
-        let color = match label {
-            "baseball bat" => SolidSource { r: 0x00, g: 0x10, b: 0x80, a: 0x80 },
-            "baseball glove" => SolidSource { r: 0x20, g: 0x80, b: 0x40, a: 0x80 },
-            _ => SolidSource { r: 0x80, g: 0x10, b: 0x40, a: 0x80 }
-        };
+        // 设置矩形框的颜色和样式
+        let color = SolidSource { r: 0x00, g: 0x10, b: 0x80, a: 0x80 };
         dt.stroke(
             &path,
             &Source::Solid(color),
@@ -146,31 +98,32 @@ fn main() -> ort::Result<()> {
         );
     }
 
+    // 将DrawTarget转换为show_image图像
     let overlay: show_image::Image = dt.into();
 
+    // 创建一个窗口，设置窗口标题和尺寸
     let window = show_image::context()
         .run_function_wait(move |context| -> Result<_, String> {
             let mut window = context
                 .create_window(
-                    "ort + YOLOv8",
+                    "Face Detection",
                     WindowOptions {
                         size: Some([img_width, img_height]),
                         ..WindowOptions::default()
                     },
                 )
                 .map_err(|e| e.to_string())?;
-            // window.set_image("baseball", &original_img.as_image_view().map_err(|e| e.to_string())?);
-
+            // 加载图像并设置为窗口背景
             let tt = original_img.to_rgb8();
             let image_view = ImageView::new(ImageInfo::new(PixelFormat::Bgr8, tt.width(), tt.height()), tt.as_raw());
-
-
-            window.set_image("baseball", &image_view);
-            window.set_overlay("yolo", &overlay.as_image_view().map_err(|e| e.to_string())?, true);
+            window.set_image("face", &image_view);
+            // 设置叠加层，用于显示边界框
+            window.set_overlay("face_detection", &overlay.as_image_view().map_err(|e| e.to_string())?, true);
             Ok(window.proxy())
         })
         .unwrap();
 
+    // 监听窗口事件，如果按下Esc键，则退出程序
     for event in window.event_channel().unwrap() {
         if let event::WindowEvent::KeyboardInput(event) = event {
             if event.input.key_code == Some(event::VirtualKeyCode::Escape) && event.input.state.is_pressed() {
