@@ -27,7 +27,7 @@ fn main() -> ort::Result<()> {
         .commit()?;
 
     // 打开图片文件
-    let f = "D:\\Temp\\aaa\\hg11.jpg";
+    let f = "D:\\Temp\\aaa\\t1.jpg";
     let original_img = image::open(Path::new(f)).unwrap();
     let (img_width, img_height) = (original_img.width(), original_img.height());
     let img = original_img.resize_exact(640, 640, FilterType::CatmullRom);
@@ -58,24 +58,26 @@ fn main() -> ort::Result<()> {
     let output_451 = outputs["451"].try_extract_tensor::<f32>()?.t().into_owned();
     let output_448 = outputs["448"].try_extract_tensor::<f32>()?.to_owned();
 
-    println!("output_451  shape{:?}",output_451.shape());
-    println!("output_448  shape{:?}",output_448.shape());
+
+
 
     let mut boxes = Vec::new();
     // let output_451 = output_451.slice(s![.., ..,]);
 
 
-    let output_451 = output_451.slice(s![0, ..]);  // 选取第一个批次的元素
+    // let output_451 = output_451.slice(s![0, ..]);  // 选取第一个批次的元素
 
     // 448（12800x1=>1x80x80x2 ）
     // output_448  shape[12800, 1]
+    println!("output_448  shape{:?}",output_448.shape());
     let output_448_reshaped = output_448.into_shape([80,80,2]).unwrap(); // 重塑为 (80, 80, 2, 4)
     println!("output_448_reshaped  shape{:?}",output_448_reshaped.shape());
 
     // 451：  1x8x80x80 每一个分数对应的四个点(x1,y1,x2,y2)*注意这个点是距离原点的相对值，
     // output_451  shape[4, 12800]  == 51,200  ==  1x8x80x80
-    // let output_451_reshaped = output_451.clone().into_shape([8,80,80]).unwrap();
-    // println!("output_451_reshaped  shape{:?}",output_451_reshaped.shape());
+    println!("output_451  shape{:?}",output_451.shape());
+    let output_451_reshaped = output_451.clone().into_shape([8,80,80]).unwrap();
+    println!("output_451_reshaped  shape{:?}",output_451_reshaped.shape());
 
 
 
