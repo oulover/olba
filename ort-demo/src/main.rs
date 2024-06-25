@@ -55,27 +55,31 @@ fn main() -> ort::Result<()> {
     // 还是需要计算的，这里1~10 是一组坐标点，另外的10~20是另外一张图的一组坐标点，分开计算就行。
 
     let outputs: SessionOutputs = model.run(inputs!["input.1" => input.view()]?)?;
-    let output_451 = outputs["451"].try_extract_tensor::<f32>()?.t().into_owned();
-    let output_448 = outputs["448"].try_extract_tensor::<f32>()?.to_owned();
-
-    println!("output_451  shape{:?}",output_451.shape());
-    println!("output_448  shape{:?}",output_448.shape());
-
-    let mut boxes = Vec::new();
-    // let output_451 = output_451.slice(s![.., ..,]);
-
-
-    let output_451 = output_451.slice(s![0, ..]);  // 选取第一个批次的元素
 
     // 448（12800x1=>1x80x80x2 ）
     // output_448  shape[12800, 1]
+    let output_448 = outputs["448"].try_extract_tensor::<f32>()?.to_owned();
+    println!("output_448  shape{:?}",output_448.shape());
     let output_448_reshaped = output_448.into_shape([80,80,2]).unwrap(); // 重塑为 (80, 80, 2, 4)
     println!("output_448_reshaped  shape{:?}",output_448_reshaped.shape());
 
+
+
+
+    // let output_451 = output_451.slice(s![.., ..,]);
+    let output_451 = outputs["451"].try_extract_tensor::<f32>()?.t().into_owned();
+    println!("output_451  shape{:?}",output_451.shape());
+    let output_451_reshaped = output_451.clone().into_shape([8,80,80]).unwrap();
+    println!("output_451_reshaped  shape{:?}",output_451_reshaped.shape());
+
+
+
+
     // 451：  1x8x80x80 每一个分数对应的四个点(x1,y1,x2,y2)*注意这个点是距离原点的相对值，
     // output_451  shape[4, 12800]  == 51,200  ==  1x8x80x80
-    // let output_451_reshaped = output_451.clone().into_shape([8,80,80]).unwrap();
-    // println!("output_451_reshaped  shape{:?}",output_451_reshaped.shape());
+
+    let mut boxes = Vec::new();
+
 
 
 
