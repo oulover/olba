@@ -3,7 +3,7 @@
 use std::path::Path;
 
 use image::{GenericImageView, imageops::FilterType, RgbImage};
-use ndarray::{Array, Axis, s};
+use ndarray::{Array, ArrayBase, Axis, s};
 use ort::{CUDAExecutionProvider, inputs, Session, SessionOutputs};
 use raqote::{DrawOptions, DrawTarget, LineJoin, PathBuilder, SolidSource, Source, StrokeStyle};
 use show_image::{event, ImageInfo, ImageView, PixelFormat, WindowOptions};
@@ -103,19 +103,61 @@ fn main() -> ort::Result<()> {
     let output_451 =  output_451 * 8.0;
     let axis_451_0 = output_451.axis_iter(Axis(0));
     println!( "output_451 --  {:?}",output_451.shape());
-    for axis_one in axis_451_0 {
-        println!("shape 448 -- {:?}", axis_one);
+    // for axis_one in axis_451_0 {
+    //     println!("shape 448 -- {:?}", axis_one);
+    // }
+
+    let mut input_boxes = Array::zeros((12800,2));
+    for i in 0..(12800/2){
+        let index = i*2;
+        input_boxes[[index,0]] = ((i*8)%640) as f32;
+        input_boxes[[index+1,0]] = ((i*8)%640) as f32;
+        // input_boxes[[index+1,1]] = 0.0;
     }
+    // for axis_one in input_boxes .axis_iter(Axis(0)){
+    //      println!("input_boxes 448 -- {:?}", axis_one);
+    //  }
+    let points = input_boxes;
+    let distance = output_451.clone();
+   let temp_box =  {
+        // 确保输入点集和距离集的形状匹配
+        // assert_eq!(points.shape(), distance.shape());
 
+        let n = points.len_of(Axis(0));
 
+        // 初始化输出数组
+        let mut bboxes = Array::zeros((n, 4));
+
+        for i in 0..n {
+            let x = points[[i, 0]];
+            let y = points[[i, 1]];
+
+            let dx1 = distance[[i, 0]];
+            let dy1 = distance[[i, 1]];
+            let dx2 = distance[[i, 2]];
+            let dy2 = distance[[i, 3]];
+
+            // 计算边界框的坐标
+            bboxes[[i, 0]] = x - dx1; // x1
+            bboxes[[i, 1]] = y - dy1; // y1
+            bboxes[[i, 2]] = x + dx2; // x2
+            bboxes[[i, 3]] = y + dy2; // y2
+        }
+
+        bboxes
+    };
+    println!("{:?}",temp_box.shape()); // 正确了 bboxes = distance2bbox(anchor_centers, bbox_preds)
+    // for axis_one in temp_box .axis_iter(Axis(0)){
+    //      println!("temp_box 448 -- {:?}", axis_one);
+    //  }
 
     // ------------------------------------------------------------------------------------------------------------------------
     println!("shape 448 -- {:?}", output_448.shape()); // shape 448 -- [12800, 1]
     let axis_448_0 = output_448.axis_iter(Axis(1));
 
-    // for axis_one in axis_448_0 {
-    //     println!("shape 448 -- {:?}", axis_one);
-    // }
+    for axis_one in axis_448_0 {
+        println!("shape 448 -- {:?}", axis_one);
+    }
 
 
     // --------------------------------------------------------------------------------------------------------------------
