@@ -72,7 +72,7 @@ fn main() -> ort::Result<()> {
     }
 
     // 现在 `input` 包含处理后的图像数据
-    println!("{:?}", input);
+   //  println!("{:?}", input);
 
    // println!(" rgb_img {}",input);
 
@@ -99,14 +99,23 @@ fn main() -> ort::Result<()> {
     // 451：bboxs: 1x8x80x80 每一个分数对应的四个点(x1,y1,x2,y2)*注意这个点是距离原点的相对值，
     // 还是需要计算的,这里1x8  前面1~4 是一个矩形框的点，后面的4~8是另一张图的矩形框坐标点，就是黑白图。
     let output_451 = outputs["451"].try_extract_tensor::<f32>()?.t().into_owned();
+    let output_451 = output_451.into_shape([12800,4]).unwrap();
+    let output_451 =  output_451 * 8.0;
+    let axis_451_0 = output_451.axis_iter(Axis(0));
+    println!( "output_451 --  {:?}",output_451.shape());
+    for axis_one in axis_451_0 {
+        println!("shape 448 -- {:?}", axis_one);
+    }
+
+
 
     // ------------------------------------------------------------------------------------------------------------------------
     println!("shape 448 -- {:?}", output_448.shape()); // shape 448 -- [12800, 1]
     let axis_448_0 = output_448.axis_iter(Axis(1));
 
-    for axis_one in axis_448_0 {
-        println!("shape 448 -- {:?}", axis_one);
-    }
+    // for axis_one in axis_448_0 {
+    //     println!("shape 448 -- {:?}", axis_one);
+    // }
 
 
     // --------------------------------------------------------------------------------------------------------------------
