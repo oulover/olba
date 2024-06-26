@@ -1,5 +1,6 @@
 #![allow(clippy::manual_retain)]
 
+use std::iter::Zip;
 use std::path::Path;
 
 use image::{GenericImageView, imageops::FilterType, RgbImage};
@@ -7,6 +8,7 @@ use ndarray::{Array, ArrayBase, Axis, s};
 use ort::{CUDAExecutionProvider, inputs, Session, SessionOutputs};
 use raqote::{DrawOptions, DrawTarget, LineJoin, PathBuilder, SolidSource, Source, StrokeStyle};
 use show_image::{event, ImageInfo, ImageView, PixelFormat, WindowOptions};
+use tracing_subscriber::filter::FilterExt;
 
 #[derive(Debug, Clone, Copy)]
 struct BoundingBox {
@@ -72,9 +74,9 @@ fn main() -> ort::Result<()> {
     }
 
     // 现在 `input` 包含处理后的图像数据
-   //  println!("{:?}", input);
+    //  println!("{:?}", input);
 
-   // println!(" rgb_img {}",input);
+    // println!(" rgb_img {}",input);
 
 
     let model = Session::builder()?.commit_from_file(DET_10G_URL)?;
@@ -99,19 +101,19 @@ fn main() -> ort::Result<()> {
     // 451：bboxs: 1x8x80x80 每一个分数对应的四个点(x1,y1,x2,y2)*注意这个点是距离原点的相对值，
     // 还是需要计算的,这里1x8  前面1~4 是一个矩形框的点，后面的4~8是另一张图的矩形框坐标点，就是黑白图。
     let output_451 = outputs["451"].try_extract_tensor::<f32>()?.t().into_owned();
-    let output_451 = output_451.into_shape([12800,4]).unwrap();
-    let output_451 =  output_451 * 8.0;
+    let output_451 = output_451.into_shape([12800, 4]).unwrap();
+    let output_451 = output_451 * 8.0;
     let axis_451_0 = output_451.axis_iter(Axis(0));
-    println!( "output_451 --  {:?}",output_451.shape());
+    println!("output_451 --  {:?}", output_451.shape());
     // for axis_one in axis_451_0 {
     //     println!("shape 448 -- {:?}", axis_one);
     // }
 
-    let mut input_boxes = Array::zeros((12800,2));
-    for i in 0..(12800/2){
-        let index = i*2;
-        input_boxes[[index,0]] = ((i*8)%640) as f32;
-        input_boxes[[index+1,0]] = ((i*8)%640) as f32;
+    let mut input_boxes = Array::zeros((12800, 2));
+    for i in 0..(12800 / 2) {
+        let index = i * 2;
+        input_boxes[[index, 0]] = ((i * 8) % 640) as f32;
+        input_boxes[[index + 1, 0]] = ((i * 8) % 640) as f32;
         // input_boxes[[index+1,1]] = 0.0;
     }
     // for axis_one in input_boxes .axis_iter(Axis(0)){
@@ -119,7 +121,7 @@ fn main() -> ort::Result<()> {
     //  }
     let points = input_boxes;
     let distance = output_451.clone();
-   let temp_box =  {
+    let temp_box = {
         // 确保输入点集和距离集的形状匹配
         // assert_eq!(points.shape(), distance.shape());
 
@@ -146,10 +148,104 @@ fn main() -> ort::Result<()> {
 
         bboxes
     };
-    println!("{:?}",temp_box.shape()); // 正确了 bboxes = distance2bbox(anchor_centers, bbox_preds)
+    println!("{:?}", temp_box.shape()); // 正确了 bboxes = distance2bbox(anchor_centers, bbox_preds)
     // for axis_one in temp_box .axis_iter(Axis(0)){
     //      println!("temp_box 448 -- {:?}", axis_one);
     //  }
+
+    // 结果
+     // let mut scores_list = Vec::new();
+    // 16
+    // 471，474，477
+    // 471  float32[3200,1]  scores
+    // 474  float32[3200,4]  bbox_preds
+    // 477  float32[3200,10]
+    // ********************---------------****
+    let stride = 16;
+    let scores_471 = outputs["471"].try_extract_tensor::<f32>()?.to_owned();
+    let bbox_preds_474 = outputs["474"].try_extract_tensor::<f32>()?.to_owned();
+    let bbox_preds_474 = bbox_preds_474 * 16.0;
+
+
+    let mut input_boxes = Array::zeros((3200, 2));
+    for i in 0..(3200 / 2) {
+        let index = i * 2;
+        input_boxes[[index, 0]] = ((i * stride) % 640) as f32;
+        input_boxes[[index + 1, 0]] = ((i * stride) % 640) as f32;
+        // input_boxes[[index+1,1]] = 0.0;
+    }
+
+    let points = input_boxes;
+    let distance = bbox_preds_474.clone();
+    let bbox_preds_474_temp_box = {
+        // 确保输入点集和距离集的形状匹配
+        // assert_eq!(points.shape(), distance.shape());
+
+        let n = points.len_of(Axis(0));
+
+        // 初始化输出数组
+        let mut bboxes = Array::zeros((n, 4));
+
+        for i in 0..n {
+            let x = points[[i, 0]];
+            let y = points[[i, 1]];
+
+            let dx1 = distance[[i, 0]];
+            let dy1 = distance[[i, 1]];
+            let dx2 = distance[[i, 2]];
+            let dy2 = distance[[i, 3]];
+
+            // 计算边界框的坐标
+            bboxes[[i, 0]] = x - dx1; // x1
+            bboxes[[i, 1]] = y - dy1; // y1
+            bboxes[[i, 2]] = x + dx2; // x2
+            bboxes[[i, 3]] = y + dy2; // y2
+        }
+
+        bboxes
+    };
+
+
+
+
+
+    println!("bbox_preds_474_temp_box  shape {:?}",bbox_preds_474_temp_box.shape()); //  [3200, 4]
+    // for axis_one in bbox_preds_474_temp_box.axis_iter(Axis(1)) {
+    //     println!("bbox_preds_474_temp_box -- {:?}", axis_one);
+    // }
+    // OK
+
+    let pos_index:Vec<usize> = scores_471
+        .iter()
+        .enumerate()
+        .filter_map(|(i, &score)| if score >= 0.5 { Some(i) } else { None })
+        .collect::<Vec<_>>();
+
+    let pos_scores = scores_471.select(Axis(0), &pos_index[..]);
+    let pos_bboxes = bbox_preds_474_temp_box.select(Axis(0),&pos_index[..]);
+
+    println!("pos_scores  shape {:?}",pos_scores.shape()); //  [3200, 4]
+    println!("pos_bboxes  shape {:?}",pos_bboxes.shape()); //  [3200, 4]
+
+    let mut boxes_result =Vec::new();
+    let  index_size = 0;
+    // for axis_one in pos_bboxes.axis_iter(Axis(0)). {
+    //     println!("pos_bboxes -- {:?}", axis_one);
+    //     boxes_result.push((
+    //
+    //     ))
+    // }
+    pos_bboxes.axis_iter(Axis(0)).zip(pos_bboxes.axis_iter(Axis(0))).for_each(|(so,bo)|{
+        boxes_result.push((
+            BoundingBox{
+                x1: bo[0],
+                y1: bo[1],
+                x2: bo[2],
+                y2: bo[3],
+            },"tlab",so[0]
+        ))
+    });
+
 
     // ------------------------------------------------------------------------------------------------------------------------
     println!("shape 448 -- {:?}", output_448.shape()); // shape 448 -- [12800, 1]
@@ -161,43 +257,30 @@ fn main() -> ort::Result<()> {
 
 
     // --------------------------------------------------------------------------------------------------------------------
+    let mut boxes = boxes_result.clone();
+    boxes.sort_by(|box1, box2| box2.2.total_cmp(&box1.2));
+    let mut result = Vec::new();
 
-    let mut boxes = Vec::new();
-    // let output_451 = output_451.slice(s![.., ..,]);
-
-
-    // let output_451 = output_451.slice(s![0, ..]);  // 选取第一个批次的元素
-
-    // 448（12800x1=>1x80x80x2 ）
-    // output_448  shape[12800, 1]
-    println!("output_448  shape{:?}", output_448.shape());
-    let output_448_reshaped = output_448.into_shape([80, 80, 2]).unwrap(); // 重塑为 (80, 80, 2, 4)
-    println!("output_448_reshaped  shape{:?}", output_448_reshaped.shape());
-
-    // 451：  1x8x80x80 每一个分数对应的四个点(x1,y1,x2,y2)*注意这个点是距离原点的相对值，
-    // output_451  shape[4, 12800]  == 51,200  ==  1x8x80x80
-    println!("output_451  shape{:?}", output_451.shape());
-    let output_451_reshaped = output_451.clone().into_shape([8, 80, 80]).unwrap();
-    println!("output_451_reshaped  shape{:?}", output_451_reshaped.shape());
-
-
-    let x_all = output_448_reshaped.axis_iter(Axis(0));
-    for row in x_all {
-        let row: Vec<_> = row.iter().copied().collect();
-        let x1 = row[0] / 640. * (img_width as f32);
-        let y1 = row[1] / 640. * (img_height as f32);
-        let x2 = row[2] / 640. * (img_width as f32);
-        let y2 = row[3] / 640. * (img_height as f32);
-        boxes.push(BoundingBox { x1, y1, x2, y2 });
+    while !boxes.is_empty() {
+        result.push(boxes[0]);
+        boxes = boxes
+            .iter()
+            .filter(|box1| intersection(&boxes[0].0, &box1.0) / union(&boxes[0].0, &box1.0) < 0.7)
+            .copied()
+            .collect();
     }
 
     let mut dt = DrawTarget::new(img_width as _, img_height as _);
 
-    for bbox in boxes {
+    for (bbox, label, _confidence) in result {
         let mut pb = PathBuilder::new();
         pb.rect(bbox.x1, bbox.y1, bbox.x2 - bbox.x1, bbox.y2 - bbox.y1);
         let path = pb.finish();
-        let color = SolidSource { r: 0x00, g: 0xFF, b: 0x00, a: 0xFF };
+        let color = match label {
+            "baseball bat" => SolidSource { r: 0x00, g: 0x10, b: 0x80, a: 0x80 },
+            "baseball glove" => SolidSource { r: 0x20, g: 0x80, b: 0x40, a: 0x80 },
+            _ => SolidSource { r: 0x80, g: 0x10, b: 0x40, a: 0x80 }
+        };
         dt.stroke(
             &path,
             &Source::Solid(color),
@@ -216,19 +299,21 @@ fn main() -> ort::Result<()> {
         .run_function_wait(move |context| -> Result<_, String> {
             let mut window = context
                 .create_window(
-                    "insightface + det_10g",
+                    "ort + YOLOv8",
                     WindowOptions {
                         size: Some([img_width, img_height]),
                         ..WindowOptions::default()
                     },
                 )
                 .map_err(|e| e.to_string())?;
+            // window.set_image("baseball", &original_img.as_image_view().map_err(|e| e.to_string())?);
 
             let tt = original_img.to_rgb8();
             let image_view = ImageView::new(ImageInfo::new(PixelFormat::Bgr8, tt.width(), tt.height()), tt.as_raw());
 
-            window.set_image("face", &image_view);
-            window.set_overlay("det_10g", &overlay.as_image_view().map_err(|e| e.to_string())?, true);
+
+            window.set_image("baseball", &image_view);
+            window.set_overlay("yolo", &overlay.as_image_view().map_err(|e| e.to_string())?, true);
             Ok(window.proxy())
         })
         .unwrap();
@@ -241,5 +326,23 @@ fn main() -> ort::Result<()> {
         }
     }
 
+
+
+
+
+
+
+
+
+
+
     Ok(())
+}
+
+fn intersection(box1: &BoundingBox, box2: &BoundingBox) -> f32 {
+    (box1.x2.min(box2.x2) - box1.x1.max(box2.x1)) * (box1.y2.min(box2.y2) - box1.y1.max(box2.y1))
+}
+
+fn union(box1: &BoundingBox, box2: &BoundingBox) -> f32 {
+    ((box1.x2 - box1.x1) * (box1.y2 - box1.y1)) + ((box2.x2 - box2.x1) * (box2.y2 - box2.y1)) - intersection(box1, box2)
 }
