@@ -154,7 +154,7 @@ fn main() -> ort::Result<()> {
     //  }
 
     // 结果
-     // let mut scores_list = Vec::new();
+    // let mut scores_list = Vec::new();
     // 16
     // 471，474，477
     // 471  float32[3200,1]  scores
@@ -168,11 +168,15 @@ fn main() -> ort::Result<()> {
 
 
     let mut input_boxes = Array::zeros((3200, 2));
+    let y = 0;
+
     for i in 0..(3200 / 2) {
         let index = i * 2;
         input_boxes[[index, 0]] = ((i * stride) % 640) as f32;
         input_boxes[[index + 1, 0]] = ((i * stride) % 640) as f32;
-        // input_boxes[[index+1,1]] = 0.0;
+        let a = ((i * stride) / 640) as f32;
+        input_boxes[[index, 1]] = a * stride as f32;
+        input_boxes[[index + 1, 1]] = a * stride as f32;
     }
 
     let points = input_boxes;
@@ -206,43 +210,45 @@ fn main() -> ort::Result<()> {
     };
 
 
-
-
-
-    println!("bbox_preds_474_temp_box  shape {:?}",bbox_preds_474_temp_box.shape()); //  [3200, 4]
-    // for axis_one in bbox_preds_474_temp_box.axis_iter(Axis(1)) {
-    //     println!("bbox_preds_474_temp_box -- {:?}", axis_one);
-    // }
+    println!("bbox_preds_474_temp_box  shape {:?}", bbox_preds_474_temp_box.shape()); //  [3200, 4]
+    for axis_one in bbox_preds_474_temp_box.axis_iter(Axis(0)) {
+        println!("bbox_preds_474_temp_box -- {:?}", axis_one);
+    }
     // OK
 
-    let pos_index:Vec<usize> = scores_471
+    let pos_index: Vec<usize> = scores_471
         .iter()
         .enumerate()
         .filter_map(|(i, &score)| if score >= 0.5 { Some(i) } else { None })
         .collect::<Vec<_>>();
 
     let pos_scores = scores_471.select(Axis(0), &pos_index[..]);
-    let pos_bboxes = bbox_preds_474_temp_box.select(Axis(0),&pos_index[..]);
+    let pos_bboxes = bbox_preds_474_temp_box.select(Axis(0), &pos_index[..]);
 
-    println!("pos_scores  shape {:?}",pos_scores.shape()); //  [3200, 4]
-    println!("pos_bboxes  shape {:?}",pos_bboxes.shape()); //  [3200, 4]
+    println!("pos_scores  shape {:?}", pos_scores.shape()); //  [3200, 4]
+    println!("pos_bboxes  shape {:?}", pos_bboxes.shape()); //  [3200, 4]
 
-    let mut boxes_result =Vec::new();
-    let  index_size = 0;
-    // for axis_one in pos_bboxes.axis_iter(Axis(0)). {
-    //     println!("pos_bboxes -- {:?}", axis_one);
-    //     boxes_result.push((
-    //
-    //     ))
-    // }
-    pos_bboxes.axis_iter(Axis(0)).zip(pos_bboxes.axis_iter(Axis(0))).for_each(|(so,bo)|{
+    for axis_one in pos_scores.axis_iter(Axis(0)) {
+        println!("pos_scores -- {:?}", axis_one);
+    }
+
+    for axis_one in pos_bboxes.axis_iter(Axis(0)) {
+        println!("pos_bboxes -- {:?}", axis_one);
+    }
+
+
+
+    let mut boxes_result = Vec::new();
+
+
+    pos_bboxes.axis_iter(Axis(0)).zip(pos_bboxes.axis_iter(Axis(0))).for_each(|(so, bo)| {
         boxes_result.push((
-            BoundingBox{
-                x1: bo[0],
-                y1: bo[1],
-                x2: bo[2],
-                y2: bo[3],
-            },"tlab",so[0]
+            BoundingBox {
+                x1: bo[0]*2.0,
+                y1: bo[1]*2.,
+                x2: bo[2]*2.,
+                y2: bo[3]*2.,
+            }, "tlab", so[0]
         ))
     });
 
@@ -274,6 +280,11 @@ fn main() -> ort::Result<()> {
 
     for (bbox, label, _confidence) in result {
         let mut pb = PathBuilder::new();
+        //          let x1 = ((bbox.x1 / 640.0) * img_width as f32) as f32;
+        //         let y1 = ((bbox.y1 / 640.0) * img_height as f32) as f32;
+        //         let x2 = ((bbox.x2 / 640.0) * img_width as f32) as f32;
+        //         let y2 = ((bbox.y2 / 640.0) * img_height as f32) as f32;
+        //         pb.rect(x1, y1, x2 - x1, y2 - y1);
         pb.rect(bbox.x1, bbox.y1, bbox.x2 - bbox.x1, bbox.y2 - bbox.y1);
         let path = pb.finish();
         let color = match label {
@@ -325,15 +336,6 @@ fn main() -> ort::Result<()> {
             }
         }
     }
-
-
-
-
-
-
-
-
-
 
 
     Ok(())
