@@ -1,5 +1,7 @@
 #![allow(clippy::manual_retain)]
 
+pub mod nms;
+
 use std::iter::Zip;
 use std::path::Path;
 
@@ -94,72 +96,72 @@ fn main() -> ort::Result<()> {
 
     let outputs: SessionOutputs = model.run(inputs!["input.1" => input.view()]?)?;
 
-    // 448（12800x1=>1x80x80x2 ）,步长为8，高宽640，640/8=80，每行80个预测框，共80行。通过insightface的源码可以看到，num_anchors = 2，
-    // 每个位置的目标框是两组,正常来说是黑白图两种，既然是同一个位置，那么可以合并一起，意思就是有2张图 ，每张图大小是80x80，有这么多分值。
-    let output_448 = outputs["448"].try_extract_tensor::<f32>()?.to_owned();
-
-    // 451：bboxs: 1x8x80x80 每一个分数对应的四个点(x1,y1,x2,y2)*注意这个点是距离原点的相对值，
-    // 还是需要计算的,这里1x8  前面1~4 是一个矩形框的点，后面的4~8是另一张图的矩形框坐标点，就是黑白图。
-    let output_451 = outputs["451"].try_extract_tensor::<f32>()?.t().into_owned();
-    let output_451 = output_451.into_shape([12800, 4]).unwrap();
-    let output_451 = output_451 * 8.0;
-    let axis_451_0 = output_451.axis_iter(Axis(0));
-    println!("output_451 --  {:?}", output_451.shape());
-    // for axis_one in axis_451_0 {
-    //     println!("shape 448 -- {:?}", axis_one);
+    // // 448（12800x1=>1x80x80x2 ）,步长为8，高宽640，640/8=80，每行80个预测框，共80行。通过insightface的源码可以看到，num_anchors = 2，
+    // // 每个位置的目标框是两组,正常来说是黑白图两种，既然是同一个位置，那么可以合并一起，意思就是有2张图 ，每张图大小是80x80，有这么多分值。
+    // let output_448 = outputs["448"].try_extract_tensor::<f32>()?.to_owned();
+    //
+    // // 451：bboxs: 1x8x80x80 每一个分数对应的四个点(x1,y1,x2,y2)*注意这个点是距离原点的相对值，
+    // // 还是需要计算的,这里1x8  前面1~4 是一个矩形框的点，后面的4~8是另一张图的矩形框坐标点，就是黑白图。
+    // let output_451 = outputs["451"].try_extract_tensor::<f32>()?.t().into_owned();
+    // let output_451 = output_451.into_shape([12800, 4]).unwrap();
+    // let output_451 = output_451 * 8.0;
+    // let axis_451_0 = output_451.axis_iter(Axis(0));
+    // println!("output_451 --  {:?}", output_451.shape());
+    // // for axis_one in axis_451_0 {
+    // //     println!("shape 448 -- {:?}", axis_one);
+    // // }
+    //
+    // let mut input_boxes = Array::zeros((12800, 2));
+    // for i in 0..(12800 / 2) {
+    //     let index = i * 2;
+    //     input_boxes[[index, 0]] = ((i * 8) % 640) as f32;
+    //     input_boxes[[index + 1, 0]] = ((i * 8) % 640) as f32;
+    //     // input_boxes[[index+1,1]] = 0.0;
     // }
-
-    let mut input_boxes = Array::zeros((12800, 2));
-    for i in 0..(12800 / 2) {
-        let index = i * 2;
-        input_boxes[[index, 0]] = ((i * 8) % 640) as f32;
-        input_boxes[[index + 1, 0]] = ((i * 8) % 640) as f32;
-        // input_boxes[[index+1,1]] = 0.0;
-    }
-    // for axis_one in input_boxes .axis_iter(Axis(0)){
-    //      println!("input_boxes 448 -- {:?}", axis_one);
-    //  }
-    let points = input_boxes;
-    let distance = output_451.clone();
-    let temp_box = {
-        // 确保输入点集和距离集的形状匹配
-        // assert_eq!(points.shape(), distance.shape());
-
-        let n = points.len_of(Axis(0));
-
-        // 初始化输出数组
-        let mut bboxes = Array::zeros((n, 4));
-
-        for i in 0..n {
-            let x = points[[i, 0]];
-            let y = points[[i, 1]];
-
-            let dx1 = distance[[i, 0]];
-            let dy1 = distance[[i, 1]];
-            let dx2 = distance[[i, 2]];
-            let dy2 = distance[[i, 3]];
-
-            // 计算边界框的坐标
-            bboxes[[i, 0]] = x - dx1; // x1
-            bboxes[[i, 1]] = y - dy1; // y1
-            bboxes[[i, 2]] = x + dx2; // x2
-            bboxes[[i, 3]] = y + dy2; // y2
-        }
-
-        bboxes
-    };
-    println!("{:?}", temp_box.shape()); // 正确了 bboxes = distance2bbox(anchor_centers, bbox_preds)
-    // for axis_one in temp_box .axis_iter(Axis(0)){
-    //      println!("temp_box 448 -- {:?}", axis_one);
-    //  }
-
-    // 结果
-    // let mut scores_list = Vec::new();
-    // 16
-    // 471，474，477
-    // 471  float32[3200,1]  scores
-    // 474  float32[3200,4]  bbox_preds
-    // 477  float32[3200,10]
+    // // for axis_one in input_boxes .axis_iter(Axis(0)){
+    // //      println!("input_boxes 448 -- {:?}", axis_one);
+    // //  }
+    // let points = input_boxes;
+    // let distance = output_451.clone();
+    // let temp_box = {
+    //     // 确保输入点集和距离集的形状匹配
+    //     // assert_eq!(points.shape(), distance.shape());
+    //
+    //     let n = points.len_of(Axis(0));
+    //
+    //     // 初始化输出数组
+    //     let mut bboxes = Array::zeros((n, 4));
+    //
+    //     for i in 0..n {
+    //         let x = points[[i, 0]];
+    //         let y = points[[i, 1]];
+    //
+    //         let dx1 = distance[[i, 0]];
+    //         let dy1 = distance[[i, 1]];
+    //         let dx2 = distance[[i, 2]];
+    //         let dy2 = distance[[i, 3]];
+    //
+    //         // 计算边界框的坐标
+    //         bboxes[[i, 0]] = x - dx1; // x1
+    //         bboxes[[i, 1]] = y - dy1; // y1
+    //         bboxes[[i, 2]] = x + dx2; // x2
+    //         bboxes[[i, 3]] = y + dy2; // y2
+    //     }
+    //
+    //     bboxes
+    // };
+    // println!("{:?}", temp_box.shape()); // 正确了 bboxes = distance2bbox(anchor_centers, bbox_preds)
+    // // for axis_one in temp_box .axis_iter(Axis(0)){
+    // //      println!("temp_box 448 -- {:?}", axis_one);
+    // //  }
+    //
+    // // 结果
+    // // let mut scores_list = Vec::new();
+    // // 16
+    // // 471，474，477
+    // // 471  float32[3200,1]  scores
+    // // 474  float32[3200,4]  bbox_preds
+    // // 477  float32[3200,10]
     // ********************---------------****
     let stride = 16;
     let scores_471 = outputs["471"].try_extract_tensor::<f32>()?.to_owned();
@@ -177,6 +179,13 @@ fn main() -> ort::Result<()> {
         let a = ((i * stride) / 640) as f32;
         input_boxes[[index, 1]] = a * stride as f32;
         input_boxes[[index + 1, 1]] = a * stride as f32;
+    }
+    let temp = input_boxes.axis_iter(Axis(0));
+
+    let mut index_i = 0;
+    for axis_one in temp {
+        println!("{}   ----- {:?}",index_i, axis_one);
+        index_i = index_i+1;
     }
 
     let points = input_boxes;
@@ -224,7 +233,7 @@ fn main() -> ort::Result<()> {
 
     let pos_scores = scores_471.select(Axis(0), &pos_index[..]);
     let pos_bboxes = bbox_preds_474_temp_box.select(Axis(0), &pos_index[..]);
-
+    let pos_bboxes = pos_bboxes * 2.0;
     println!("pos_scores  shape {:?}", pos_scores.shape()); //  [3200, 4]
     println!("pos_bboxes  shape {:?}", pos_bboxes.shape()); //  [3200, 4]
 
@@ -241,39 +250,75 @@ fn main() -> ort::Result<()> {
     let mut boxes_result = Vec::new();
 
 
-    pos_bboxes.axis_iter(Axis(0)).zip(pos_bboxes.axis_iter(Axis(0))).for_each(|(so, bo)| {
+    pos_scores.axis_iter(Axis(0)).zip(pos_bboxes.axis_iter(Axis(0))).for_each(|(so, bo)| {
+        println!("bo----{:?}--so----{:?}",bo,so);
         boxes_result.push((
             BoundingBox {
-                x1: bo[0]*2.0,
-                y1: bo[1]*2.,
-                x2: bo[2]*2.,
-                y2: bo[3]*2.,
+                x1: bo[0],
+                y1: bo[1],
+                x2: bo[2],
+                y2: bo[3],
             }, "tlab", so[0]
         ))
     });
 
 
-    // ------------------------------------------------------------------------------------------------------------------------
-    println!("shape 448 -- {:?}", output_448.shape()); // shape 448 -- [12800, 1]
-    let axis_448_0 = output_448.axis_iter(Axis(1));
 
-    for axis_one in axis_448_0 {
-        println!("shape 448 -- {:?}", axis_one);
+    for o in &boxes_result{
+        println!("pos_bboxes----{:?}---{}",o.0,o.2);
     }
+
+
+    // ------------------------------------------------------------------------------------------------------------------------
+    // println!("shape 448 -- {:?}", output_448.shape()); // shape 448 -- [12800, 1]
+    // let axis_448_0 = output_448.axis_iter(Axis(1));
+
+    // for axis_one in axis_448_0 {
+    //     println!("shape 448 -- {:?}", axis_one);
+    // }
 
 
     // --------------------------------------------------------------------------------------------------------------------
     let mut boxes = boxes_result.clone();
     boxes.sort_by(|box1, box2| box2.2.total_cmp(&box1.2));
-    let mut result = Vec::new();
+    // let mut result = Vec::new();
 
-    while !boxes.is_empty() {
-        result.push(boxes[0]);
-        boxes = boxes
-            .iter()
-            .filter(|box1| intersection(&boxes[0].0, &box1.0) / union(&boxes[0].0, &box1.0) < 0.7)
-            .copied()
-            .collect();
+    // while !boxes.is_empty() {
+    //     if let Some(p) = boxes.pop(){
+    //         result.push(p);
+    //     }
+    //
+    //     boxes = boxes
+    //         .iter()
+    //         .skip(1)
+    //         .filter(|box1| {
+    //             let x = intersection(&boxes[0].0, &box1.0) / union(&boxes[0].0, &box1.0);
+    //             println!("skip -- {}",x);
+    //             x < 0.7
+    //         })
+    //         .copied()
+    //         .collect();
+    //     boxes.sort_by(|box1, box2| box2.2.total_cmp(&box1.2));
+    // }
+
+   let t_r =  nms::nms(boxes_result.clone().into_iter().map(|o|nms::BBox::new(
+       o.0.x1,o.0.y1,o.0.x2,o.0.y2,o.2,1usize
+   )).collect(), 0.5);
+
+    let result:Vec<_> = t_r.into_iter().map(|o|{
+        (
+            BoundingBox {
+                x1: o.x1,
+                y1: o.y1,
+                x2: o.x2,
+                y2: o.y2,
+            }, "tlab", o.score
+        )
+    }).collect();
+
+    println!( "result size is {}",result.len());
+    for o in &result{
+        println!("result----{:?}---{}",o.0,o.2);
     }
 
     let mut dt = DrawTarget::new(img_width as _, img_height as _);
