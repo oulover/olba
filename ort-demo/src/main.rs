@@ -1,102 +1,31 @@
-#![allow(clippy::manual_retain)]
+extern crate opencv;
+use opencv::core::{self, Mat, Vector};
+use opencv::highgui::{self, imshow, wait_key, destroy_all_windows};
+use opencv::imgcodecs::imread;
+use opencv::prelude::*;
+use opencv::videoio::{self, VideoCapture, CAP_FFMPEG,CAP_ANY};
 
-pub mod nms;
+fn main() {
+    let url = "D:\\Temp\\aaa\\ssss22.mp4"; // 替换为你的视频 URL
 
-use std::iter::Zip;
-use std::path::Path;
-
-use image::{GenericImageView, imageops::FilterType, RgbImage};
-use ndarray::{Array, ArrayBase, Axis, s};
-use ort::{CUDAExecutionProvider, inputs, Session, SessionOutputs};
-use raqote::{DrawOptions, DrawTarget, LineJoin, PathBuilder, SolidSource, Source, StrokeStyle};
-use show_image::{event, ImageInfo, ImageView, PixelFormat, WindowOptions};
-use tracing_subscriber::filter::FilterExt;
-
-const DET_10G_URL: &str = "D:\\temp\\aaa\\buffalo_l\\w600k_r50.onnx";
-
-#[show_image::main]
-fn main() -> ort::Result<()> {
-    tracing_subscriber::fmt::init();
-
-    ort::init()
-        .with_execution_providers([CUDAExecutionProvider::default().build()])
-        .commit()?;
-
-    // 打开图片文件
-    let f = "D:\\Temp\\aaa\\t1.jpg";
-    let original_img = image::open(Path::new(f)).unwrap();
-    let original_img= original_img.resize_exact(112, 112, image::imageops::FilterType::Lanczos3);
-    let (img_width, img_height) = (original_img.width(), original_img.height());
-
-
-    // 输入尺寸
-    let input_size = (112, 112);
-    let input_mean = 127.5;
-    let input_std = 128.0;
-    // // 缩放图片
-    let resized_img = original_img.resize_exact(112, 112, image::imageops::FilterType::Lanczos3);
-
-    // 创建一个640x640的黑色图像
-    let mut new_image = RgbImage::new(input_size.0, input_size.1);
-
-    // 将缩放后的图像复制到新图像的左上角
-    let roi = image::imageops::overlay(&mut new_image, &resized_img.to_rgb8(), 0, 0);
-
-    // 将图像数据转换为ndarray
-    let mut input = Array::zeros((1, 3, 112, 112));
-
-
-    for (x, y, pixel) in new_image.enumerate_pixels() {
-        let r = (pixel[0] as f32 - input_mean) / input_std;
-        let g = (pixel[1] as f32 - input_mean) / input_std;
-        let b = (pixel[2] as f32 - input_mean) / input_std;
-
-        input[[0, 0, y as usize, x as usize]] = r;
-        input[[0, 1, y as usize, x as usize]] = g;
-        input[[0, 2, y as usize, x as usize]] = b;
+    let mut cap = VideoCapture::from_file_def(url).unwrap();
+    if !cap.is_opened().expect("无法检查视频流是否打开") {
+        println!("无法打开2视频流");
+        return;
     }
 
-    // 现在 `input` 包含处理后的图像数据
-    //  println!("{:?}", input);
+    let mut frame = Mat::default();
+    loop {
+        if !cap.read(&mut frame).expect("无法读取帧") {
+            println!("视频结束或无3法读取帧");
+            break;
+        }
 
-    // println!(" rgb_img {}",input);
-
-
-    let model = Session::builder()?.commit_from_file(DET_10G_URL)?;
-    for i in  model.inputs.iter(){
-        println!("{:?}",i);
-    }
-   for i in  model.outputs.iter(){
-       println!("{:?}",i);
-   }
-    let outputs: SessionOutputs = model.run(inputs!["input.1" => input.view()]?)?;
-
-    let mut scores_471 = outputs["683"].try_extract_tensor::<f32>()?.to_owned();
-
-    let scores_471 = scores_471.clone() * scores_471;
-
-    let temp =scores_471.iter();
-
-    let mut index_i = 0;
-    for axis_one in temp {
-        println!("{}   ----- {:?}",index_i, axis_one);
-        index_i = index_i+1;
+        imshow("Video", &frame).expect("无法显示帧");
+        if wait_key(30).expect("等待按键失败") > 0 {
+            break;
+        }
     }
 
-    let r:f32 = scores_471.iter().map(|o|o.abs()).sum();
-    println!("*---{}",r);
-
-
-
-
-
-
-
-
-
-
-
-
-
-    Ok(())
+    destroy_all_windows().expect("无法关闭窗口");
 }
