@@ -1,7 +1,7 @@
 #![allow(clippy::manual_retain)]
 
-pub mod nms;
-
+// pub mod nms;
+use crate::nms;
 use std::iter::Zip;
 use std::path::Path;
 
@@ -23,7 +23,7 @@ struct BoundingBox {
 const DET_10G_URL: &str = "D:\\temp\\aaa\\buffalo_l\\det_10g.onnx";
 
 #[show_image::main]
-fn main() -> ort::Result<()> {
+fn main22() -> ort::Result<()> {
     tracing_subscriber::fmt::init();
 
     ort::init()
@@ -67,6 +67,9 @@ fn main() -> ort::Result<()> {
     let mut input = Array::zeros((1, 3, 640, 640));
 
     for (x, y, pixel) in new_image.enumerate_pixels() {
+
+
+
         let r = (pixel[0] as f32 - input_mean) / input_std;
         let g = (pixel[1] as f32 - input_mean) / input_std;
         let b = (pixel[2] as f32 - input_mean) / input_std;
