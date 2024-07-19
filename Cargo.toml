@@ -1,5 +1,5 @@
 [workspace]
-members = [  "ort-demo","demoe"]
+members = [  "ort-demo","demoe", "olbe-ai"]
 
 [workspace.package]
 

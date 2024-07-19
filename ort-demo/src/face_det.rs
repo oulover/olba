@@ -10,8 +10,8 @@ use ort::{inputs, Session, SessionOutputs};
 
 fn cosine_similarity(a: &Array1<f32>, b: &Array1<f32>) -> f32 {
     let dot_product = a.dot(b);
-    let norm_a: f32 = a.dot(a);
-    let norm_b: f32 = b.dot(b);
+    let norm_a = a.dot(a);
+    let norm_b = b.dot(b);
     if norm_a == 0.0 || norm_b == 0.0 {
         0.0 // If either vector is zero, the cosine similarity is 0
     } else {
