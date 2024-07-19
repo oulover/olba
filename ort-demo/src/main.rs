@@ -33,7 +33,7 @@ fn main22() -> ort::Result<()> {
         .commit()?;
 
     // 打开图片文件
-    let f = "D:\\Temp\\aaa\\t1.jpg";
+    let f = "D:\\Temp\\aaa\\w1.jpg";
     let original_img = image::open(Path::new(f)).unwrap();
     let original_img= original_img.resize_exact(1280, 886, image::imageops::FilterType::Lanczos3);
     let (img_width, img_height) = (original_img.width(), original_img.height());

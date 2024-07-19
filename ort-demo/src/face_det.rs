@@ -1,20 +1,28 @@
 #![allow(clippy::manual_retain)]
 
 
-use std::iter::Zip;
-use std::path::Path;
+use image::{DynamicImage, GenericImageView, RgbImage};
+use ndarray::{Array, Array1, ArrayD, Dim, IxDynImpl};
+// use ndarray_linalg::Norm;
+use ort::{inputs, Session, SessionOutputs};
 
-use image::{DynamicImage, GenericImageView, imageops::FilterType, RgbImage};
-use ndarray::{Array, ArrayBase, Axis, Dim, IxDynImpl, s};
-use ort::{CUDAExecutionProvider, inputs, Session, SessionOutputs};
-use raqote::{DrawOptions, DrawTarget, LineJoin, PathBuilder, SolidSource, Source, StrokeStyle};
-use show_image::{event, ImageInfo, ImageView, PixelFormat, WindowOptions};
-use tracing_subscriber::filter::FilterExt;
+
+
+fn cosine_similarity(a: &Array1<f32>, b: &Array1<f32>) -> f32 {
+    let dot_product = a.dot(b);
+    let norm_a: f32 = a.dot(a);
+    let norm_b: f32 = b.dot(b);
+    if norm_a == 0.0 || norm_b == 0.0 {
+        0.0 // If either vector is zero, the cosine similarity is 0
+    } else {
+        (dot_product * dot_product / (norm_a * norm_b)).sqrt()
+    }
+}
 
 const DET_10G_URL: &str = "D:\\temp\\aaa\\buffalo_l\\w600k_r50.onnx";
 
 // #[show_image::main]
-pub fn main222(original_img1:DynamicImage,original_img2:DynamicImage) -> ort::Result<()> {
+pub fn main222(original_img1: DynamicImage, original_img2: DynamicImage) -> ort::Result<()> {
     // tracing_subscriber::fmt::init();
     //
     // ort::init()
@@ -23,15 +31,19 @@ pub fn main222(original_img1:DynamicImage,original_img2:DynamicImage) -> ort::Re
 
 
 
-    let h1=  op_it(original_img1)?;
+    let h1 = op_it(original_img1)?;
+    convert_to_array1(h1.clone());
 
-    let h2=  op_it(original_img2)?;
+
+    let h2 = op_it(original_img2)?;
+
+    println!("cosine_similarity  ----  {}", cosine_similarity(&(convert_to_array1(h1.clone()).unwrap()), &convert_to_array1(h2.clone()).unwrap()));
 
     let r = h1 - h2;
     let r = r.clone() * r;
 
-    let r:f32 = r.iter().map(|o|o.abs()).sum();
-    println!("main222 *---{}",r);
+    let r: f32 = r.iter().map(|o| o.abs()).sum();
+    println!("main222 *---{}", r.sqrt());
 
     // 1-2 = *---472.96747
     // 1-3 = *---504.29126
@@ -41,7 +53,6 @@ pub fn main222(original_img1:DynamicImage,original_img2:DynamicImage) -> ort::Re
     // 2-l2 = *---994.59064
     // 1-l2 = *---991.4202
     // s1 -s2 *---285.34122
-
 
 
     // let temp =scores_471.iter();
@@ -56,22 +67,28 @@ pub fn main222(original_img1:DynamicImage,original_img2:DynamicImage) -> ort::Re
     // println!("*---{}",r);
 
 
-
-
-
-
-
-
-
     Ok(())
 }
 
+fn convert_to_array1(arr: Array<f32, Dim<IxDynImpl>>) -> Result<Array1<f32>, &'static str> {
+    use ndarray::IxDyn;
+    // 创建一个动态维度的数组，但这里是一维的
+    // let arr_dyn = ArrayD::<f32>::from_shape_vec(Dim(IxDynImpl), vec![1.0, 2.0, 3.0]).unwrap();
 
-pub fn op_it(original_img:DynamicImage) -> ort::Result<Array<f32,Dim<IxDynImpl>>> {
+
+    println!("arr----{:?}", arr.shape());
+    let t = arr.len();
+    // 将动态维度数组转换为 Array1
+    let arr1: Array1<f32> = arr.into_shape(Dim([t as _])).unwrap().into();
+    Ok(arr1)
+}
+
+
+pub fn op_it(original_img: DynamicImage) -> ort::Result<Array<f32, Dim<IxDynImpl>>> {
     // // 打开图片文件
     // // let f = "D:\\Temp\\aaa\\h11_proc.jpg";
     // let original_img = image::open(Path::new(f)).unwrap();
-    let original_img= original_img.resize_exact(112, 112, image::imageops::FilterType::Lanczos3);
+    let original_img = original_img.resize_exact(112, 112, image::imageops::FilterType::Lanczos3);
     let (img_width, img_height) = (original_img.width(), original_img.height());
 
 
@@ -109,11 +126,11 @@ pub fn op_it(original_img:DynamicImage) -> ort::Result<Array<f32,Dim<IxDynImpl>>
 
 
     let model = Session::builder()?.commit_from_file(DET_10G_URL)?;
-    for i in  model.inputs.iter(){
-        println!("{:?}",i);
+    for i in model.inputs.iter() {
+        println!("{:?}", i);
     }
-    for i in  model.outputs.iter(){
-        println!("{:?}",i);
+    for i in model.outputs.iter() {
+        println!("{:?}", i);
     }
     let outputs: SessionOutputs = model.run(inputs!["input.1" => input.view()]?)?;
 
