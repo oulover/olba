@@ -40,6 +40,7 @@ fn main22() -> ort::Result<()> {
 
     // 输入尺寸
     let input_size = (640, 640);
+
     let input_mean = 127.5;
     let input_std = 128.0;
 
