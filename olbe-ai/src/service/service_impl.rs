@@ -74,19 +74,19 @@ pub async fn upload_file2(mut multipart: Multipart) -> anyhow::Result<String> {
             let img = image::load_from_memory(&bytes)?;
             let face_boxes = ai.get_face_boxes(&img)?;
             let mut face_img = AiSession::get_face_img(&img, &face_boxes);
-            // if face_img.len() > 0 {
-            //     for x in &face_img {
-            //         // let feat = ai.get_face_feature(x)?;
-            //         // //println!("{:?}", feat)
-            //
-            //         let mat = dynamic_image_to_mat(x).unwrap();
-            //
-            //         // let mat = imgcodecs::imdecode(&x., IMREAD_COLOR)?;
-            //         highgui::named_window("hello opencv!", 0)?;
-            //         highgui::imshow("hello opencv!", &mat)?;
-            //         highgui::wait_key(1000)?;
-            //     }
-            // }
+            if face_img.len() > 0 {
+                for x in &face_img {
+                    // let feat = ai.get_face_feature(x)?;
+                    // //println!("{:?}", feat)
+
+                    let mat = dynamic_image_to_mat(x).unwrap();
+
+                    // let mat = imgcodecs::imdecode(&x., IMREAD_COLOR)?;
+                    highgui::named_window("hello opencv!", 0)?;
+                    highgui::imshow("hello opencv!", &mat)?;
+                    highgui::wait_key(3000)?;
+                }
+            }
             if face_img.len() > 1 {
                 let t1 = face_img.pop().unwrap();
                 let t2 = face_img.pop().unwrap();
