@@ -154,7 +154,7 @@ impl AiSession {
 
     pub fn get_face_boxes(&self, param_img: &DynamicImage) -> Result<Vec<nms::BBox>> {
         // let param_img= param_img.resize_exact(1280, 886, image::imageops::FilterType::Lanczos3);
-        let param_img = param_img.clone();
+        // let param_img = param_img.clone();
         let (img_width, img_height) = (param_img.width(), param_img.height());
 
 
