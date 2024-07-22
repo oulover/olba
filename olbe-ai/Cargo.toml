@@ -1,0 +1,42 @@
+[package]
+name = "olbe-ai"
+version.workspace = true
+authors.workspace = true
+description.workspace = true
+documentation.workspace = true
+homepage.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+
+tokio = { version = "1", features = ["full"] }
+log = "0.4"
+fast_log = { version = "1.6", features = ["mmap"] }
+axum = {version = "0", features = ["macros", "multipart"] }
+tower-http = {version = "0",features = ["fs","cors"]}
+anyhow = "1"
+serde = { version = "1.0.204", features = ["derive"] }
+serde_json = "1.0.120"
+
+dotenv = "0"
+simple_logger="5.0.0"
+
+
+#-------
+ort = {workspace = true,features = ["cuda","winapi"]}
+#
+ndarray = "0.15"
+#ndarray-linalg = { version = "0.15", features = ["intel-mkl-static"] }
+
+tracing-subscriber = { version = "0.3", default-features = false, features = [ "env-filter", "fmt" ] }
+image = "0.24"
+show-image = { version = "0.14.0", features = [ "image", "raqote" ] }
+raqote = { version = "0.8", default-features = false }
+ureq = "2.1"
+tracing = "0.1"
+
+csv = "1.1.6"
+reqwest = "0.12.5"
+opencv = { version = "0"}
+lazy_static = "1.5.0"
