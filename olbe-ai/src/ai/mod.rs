@@ -100,7 +100,7 @@ impl AiSession {
 
 
        let outputs =  self.det_mod.run(inputs!["input.1" => input.view()]?)?;
-        let mut boxes_result = Vec::new();
+        // let mut boxes_result = Vec::new();
 
 
         for modInfo in ModInfo::get_insight() {
@@ -109,7 +109,7 @@ impl AiSession {
             let bbox_preds_474 = outputs[modInfo.boxes].try_extract_tensor::<f32>()?.to_owned();
             let bbox_preds_474 = bbox_preds_474 * stride;
 
-            let mut input_boxes = Array::zeros((800, 2));
+            // let mut input_boxes = Array::zeros((800, 2));
         }
 
         Ok(vec![])
@@ -125,10 +125,10 @@ impl AiSession {
         }))
     }
 
-    pub fn get_instance() -> Result<&'static Arc<AiSession>> {
+    pub fn get_instance() -> Result<Arc<AiSession>> {
         lazy_static! {
              static  ref INSTANCE_AI_SESSION:Arc<AiSession> = AiSession::new().unwrap();
         }
-        Ok(&INSTANCE_AI_SESSION)
+        Ok(INSTANCE_AI_SESSION.clone())
     }
 }
