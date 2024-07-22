@@ -39,9 +39,9 @@ impl ModInfo {
 
     pub fn get_insight() -> Vec<Self> {
         vec![
-            // Self::new(8, "448", "451"),
+            Self::new(8, "448", "451"),
             Self::new(16, "471", "474"),
-            Self::new(16, "494", "497"),
+            Self::new(32, "494", "497"),
         ]
     }
 }
@@ -154,6 +154,7 @@ impl AiSession {
 
     pub fn get_face_boxes(&self, param_img: &DynamicImage) -> Result<Vec<nms::BBox>> {
         // let param_img= param_img.resize_exact(1280, 886, image::imageops::FilterType::Lanczos3);
+        let param_img = param_img.clone();
         let (img_width, img_height) = (param_img.width(), param_img.height());
 
 
@@ -209,15 +210,15 @@ impl AiSession {
             // ********************---------------*********************************************************************Start End 中
             {
                 let stride = modInfo.stride;
-                let scores_471 = outputs["471"].try_extract_tensor::<f32>()?.to_owned();
-                let bbox_preds_474 = outputs["474"].try_extract_tensor::<f32>()?.to_owned();
+                let scores_471 = outputs[modInfo.scores].try_extract_tensor::<f32>()?.to_owned();
+                let bbox_preds_474 = outputs[modInfo.boxes].try_extract_tensor::<f32>()?.to_owned();
                 let bbox_preds_474 = bbox_preds_474 * (stride as f32);
                 let size: usize = 640 / stride;
 
                 let mut input_boxes = Array::zeros(((size * size) as _, 2));
 
 
-                for i in 0..size {
+                for i in 0..((size * size)/2) {
                     let index = i * 2;
                     input_boxes[[index, 0]] = ((i * stride) % 640) as f32;
                     input_boxes[[index + 1, 0]] = ((i * stride) % 640) as f32;
@@ -317,91 +318,91 @@ impl AiSession {
 
         let mut dt = DrawTarget::new(img_width as _, img_height as _);
 
-        let mut faces = vec![];
+
         let t_r = nms::nms(boxes_result, 0.5);
-
-        for bbox in &t_r {
-            let mut pb = PathBuilder::new();
-            //          let x1 = ((bbox.x1 / 640.0) * img_width as f32) as f32;
-            //         let y1 = ((bbox.y1 / 640.0) * img_height as f32) as f32;
-            //         let x2 = ((bbox.x2 / 640.0) * img_width as f32) as f32;
-            //         let y2 = ((bbox.y2 / 640.0) * img_height as f32) as f32;
-            //         pb.rect(x1, y1, x2 - x1, y2 - y1);
-
-            // pb.rect(bbox.x1, bbox.y1, bbox.x2 - bbox.x1, bbox.y2 - bbox.y1);
-            // println!("result--22---({},{})----({},{})", bbox.x1, bbox.y1,bbox.x2, bbox.y2,);
-            // result-BOX---(151.95132,225.53683)----(339.87537,479.1383)
-            // result-BOX---(774.05804,149.51135)----(1079.1631,547.2977)
-            // result--22---(-104.04868,-126.463165)----(83.875374,127.1383)
-            // result--22---(-153.94197,-202.48865)----(151.16313,195.2977)
-
-
-
-            // let (img_width, img_height) = (640, 640);
-            //
-            let x1 = ((bbox.x1 / 640.0) * img_width as f32) as f32;
-            let y1 = ((bbox.y1 / 640.0) * img_height as f32) as f32;
-            let x2 = ((bbox.x2 / 640.0) * img_width as f32) as f32;
-            let y2 = ((bbox.y2 / 640.0) * img_height as f32) as f32;
-            pb.rect(x1, y1, x2 - x1, y2 - y1);
-
-            println!("result-BOX---({},{})----({},{})", x1, y1,x2, y2);
-            // result-BOX---(302.95294,255.84335)----(677.6265,543.5225)
-            // result-BOX---(1543.2783,169.60194)----(2151.5813,620.8409)
-
-            // result-BOX---(151.95132,128.27408)----(339.87537,272.50992)
-            // result-BOX---(774.0581,85.034584)----(1079.1631,311.2756)
-
-            let t = original_img.crop_imm(bbox.x1 as _, bbox.y1 as _, (bbox.x2 - bbox.x1) as _, (bbox.y2 - bbox.y1) as _);
-            faces.push(t);
-
-            let path = pb.finish();
-            let color =  SolidSource { r: 0x00, g: 0x10, b: 0x80, a: 0x80 };
-            dt.stroke(
-                &path,
-                &Source::Solid(color),
-                &StrokeStyle {
-                    join: LineJoin::Round,
-                    width: 4.,
-                    ..StrokeStyle::default()
-                },
-                &DrawOptions::new(),
-            );
-        }
-
-
-        let overlay: show_image::Image = dt.into();
-
-        let window = show_image::context()
-            .run_function_wait(move |context| -> std::result::Result<_, String> {
-                let mut window = context
-                    .create_window(
-                        "ort + YOLOv8",
-                        WindowOptions {
-                            size: Some([img_width, img_height]),
-                            ..WindowOptions::default()
-                        },
-                    )
-                    .map_err(|e| e.to_string())?;
-                // window.set_image("baseball", &original_img.as_image_view().map_err(|e| e.to_string())?);
-
-                let tt = original_img.to_rgb8();
-                let image_view = ImageView::new(ImageInfo::new(PixelFormat::Bgr8, tt.width(), tt.height()), tt.as_raw());
-
-
-                window.set_image("baseball", &image_view);
-                window.set_overlay("yolo", &overlay.as_image_view().map_err(|e| e.to_string())?, true);
-                Ok(window.proxy())
-            })
-            .unwrap();
-
-        for event in window.event_channel().unwrap() {
-            if let event::WindowEvent::KeyboardInput(event) = event {
-                if event.input.key_code == Some(event::VirtualKeyCode::Escape) && event.input.state.is_pressed() {
-                    break;
-                }
-            }
-        }
+        // let mut faces = vec![];
+        // for bbox in &t_r {
+        //     let mut pb = PathBuilder::new();
+        //     //          let x1 = ((bbox.x1 / 640.0) * img_width as f32) as f32;
+        //     //         let y1 = ((bbox.y1 / 640.0) * img_height as f32) as f32;
+        //     //         let x2 = ((bbox.x2 / 640.0) * img_width as f32) as f32;
+        //     //         let y2 = ((bbox.y2 / 640.0) * img_height as f32) as f32;
+        //     //         pb.rect(x1, y1, x2 - x1, y2 - y1);
+        //
+        //     pb.rect(bbox.x1, bbox.y1, bbox.x2 - bbox.x1, bbox.y2 - bbox.y1);
+        //     println!("result--22---({},{})----({},{})", bbox.x1, bbox.y1,bbox.x2, bbox.y2,);
+        //     // result-BOX---(151.95132,225.53683)----(339.87537,479.1383)
+        //     // result-BOX---(774.05804,149.51135)----(1079.1631,547.2977)
+        //     // result--22---(-104.04868,-126.463165)----(83.875374,127.1383)
+        //     // result--22---(-153.94197,-202.48865)----(151.16313,195.2977)
+        //
+        //
+        //
+        //     // let (img_width, img_height) = (640, 640);
+        //     //
+        //     // let x1 = ((bbox.x1 / 640.0) * img_width as f32) as f32;
+        //     // let y1 = ((bbox.y1 / 640.0) * img_height as f32) as f32;
+        //     // let x2 = ((bbox.x2 / 640.0) * img_width as f32) as f32;
+        //     // let y2 = ((bbox.y2 / 640.0) * img_height as f32) as f32;
+        //     // pb.rect(x1, y1, x2 - x1, y2 - y1);
+        //     //
+        //     // println!("result-BOX---({},{})----({},{})", x1, y1,x2, y2);
+        //     // result-BOX---(302.95294,255.84335)----(677.6265,543.5225)
+        //     // result-BOX---(1543.2783,169.60194)----(2151.5813,620.8409)
+        //
+        //     // result-BOX---(151.95132,128.27408)----(339.87537,272.50992)
+        //     // result-BOX---(774.0581,85.034584)----(1079.1631,311.2756)
+        //
+        //     let t = original_img.crop_imm(bbox.x1 as _, bbox.y1 as _, (bbox.x2 - bbox.x1) as _, (bbox.y2 - bbox.y1) as _);
+        //     faces.push(t);
+        //
+        //     let path = pb.finish();
+        //     let color =  SolidSource { r: 0x00, g: 0x10, b: 0x80, a: 0x80 };
+        //     dt.stroke(
+        //         &path,
+        //         &Source::Solid(color),
+        //         &StrokeStyle {
+        //             join: LineJoin::Round,
+        //             width: 4.,
+        //             ..StrokeStyle::default()
+        //         },
+        //         &DrawOptions::new(),
+        //     );
+        // }
+        //
+        //
+        // let overlay: show_image::Image = dt.into();
+        //
+        // let window = show_image::context()
+        //     .run_function_wait(move |context| -> std::result::Result<_, String> {
+        //         let mut window = context
+        //             .create_window(
+        //                 "ort + YOLOv8",
+        //                 WindowOptions {
+        //                     size: Some([img_width, img_height]),
+        //                     ..WindowOptions::default()
+        //                 },
+        //             )
+        //             .map_err(|e| e.to_string())?;
+        //         // window.set_image("baseball", &original_img.as_image_view().map_err(|e| e.to_string())?);
+        //
+        //         let tt = param_img.to_rgb8();
+        //         let image_view = ImageView::new(ImageInfo::new(PixelFormat::Bgr8, tt.width(), tt.height()), tt.as_raw());
+        //
+        //
+        //         window.set_image("baseball", &image_view);
+        //         window.set_overlay("yolo", &overlay.as_image_view().map_err(|e| e.to_string())?, true);
+        //         Ok(window.proxy())
+        //     })
+        //     .unwrap();
+        //
+        // for event in window.event_channel().unwrap() {
+        //     if let event::WindowEvent::KeyboardInput(event) = event {
+        //         if event.input.key_code == Some(event::VirtualKeyCode::Escape) && event.input.state.is_pressed() {
+        //             break;
+        //         }
+        //     }
+        // }
 
         Ok(t_r)
     }
