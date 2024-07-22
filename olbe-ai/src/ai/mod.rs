@@ -6,6 +6,8 @@ use lazy_static::lazy_static;
 use anyhow::Result;
 use image::{DynamicImage, RgbImage};
 use ndarray::{Array, Array1, Axis, Dim, IxDynImpl};
+use raqote::{DrawOptions, DrawTarget, LineJoin, PathBuilder, SolidSource, Source, StrokeStyle};
+use show_image::{event, ImageInfo, ImageView, PixelFormat, WindowOptions};
 
 mod nms;
 
@@ -38,8 +40,9 @@ impl ModInfo {
     pub fn get_insight() -> Vec<Self> {
         vec![
             // Self::new(8, "448", "451"),
-             Self::new(16, "471", "474"),
-             Self::new(16, "494", "497")]
+            Self::new(16, "471", "474"),
+            Self::new(16, "494", "497"),
+        ]
     }
 }
 
@@ -64,7 +67,7 @@ fn convert_to_array1(arr: &Array<f32, Dim<IxDynImpl>>) -> Result<Array1<f32>> {
     // 创建一个动态维度的数组，但这里是一维的
     // let arr_dyn = ArrayD::<f32>::from_shape_vec(Dim(IxDynImpl), vec![1.0, 2.0, 3.0]).unwrap();
 
-    println!("arr----{:?}", arr.shape());
+    //println!("arr----{:?}", arr.shape());
     let t = arr.len();
     // 将动态维度数组转换为 Array1
     let arr1: Array1<f32> = arr.clone().into_shape(Dim([t as _]))?.into();
@@ -150,6 +153,7 @@ impl AiSession {
 
 
     pub fn get_face_boxes(&self, param_img: &DynamicImage) -> Result<Vec<nms::BBox>> {
+        // let param_img= param_img.resize_exact(1280, 886, image::imageops::FilterType::Lanczos3);
         let (img_width, img_height) = (param_img.width(), param_img.height());
 
 
@@ -225,7 +229,7 @@ impl AiSession {
 
                 let mut index_i = 0;
                 for axis_one in temp {
-                    println!("{}   ----- {:?}", index_i, axis_one);
+                    //println!("{}   ----- {:?}", index_i, axis_one);
                     index_i = index_i + 1;
                 }
 
@@ -260,9 +264,9 @@ impl AiSession {
                 };
 
 
-                // println!("bbox_preds_474_temp_box  shape {:?}", bbox_preds_474_temp_box.shape()); //  [3200, 4]
+                // //println!("bbox_preds_474_temp_box  shape {:?}", bbox_preds_474_temp_box.shape()); //  [3200, 4]
                 // for axis_one in bbox_preds_474_temp_box.axis_iter(Axis(0)) {
-                //     println!("bbox_preds_474_temp_box -- {:?}", axis_one);
+                //     //println!("bbox_preds_474_temp_box -- {:?}", axis_one);
                 // }
                 // // OK
 
@@ -275,20 +279,20 @@ impl AiSession {
                 let pos_scores = scores_471.select(Axis(0), &pos_index[..]);
                 let pos_bboxes = bbox_preds_474_temp_box.select(Axis(0), &pos_index[..]);
                 let pos_bboxes = pos_bboxes * 2.0;
-                println!("pos_scores  shape {:?}", pos_scores.shape()); //  [3200, 4]
-                println!("pos_bboxes  shape {:?}", pos_bboxes.shape()); //  [3200, 4]
+                //println!("pos_scores  shape {:?}", pos_scores.shape()); //  [3200, 4]
+                //println!("pos_bboxes  shape {:?}", pos_bboxes.shape()); //  [3200, 4]
 
                 for axis_one in pos_scores.axis_iter(Axis(0)) {
-                    println!("pos_scores -- {:?}", axis_one);
+                    //println!("pos_scores -- {:?}", axis_one);
                 }
 
                 for axis_one in pos_bboxes.axis_iter(Axis(0)) {
-                    println!("pos_bboxes -- {:?}", axis_one);
+                    //println!("pos_bboxes -- {:?}", axis_one);
                 }
 
 
                 pos_scores.axis_iter(Axis(0)).zip(pos_bboxes.axis_iter(Axis(0))).for_each(|(so, bo)| {
-                    println!("bo----{:?}--so----{:?}", bo, so);
+                    //println!("bo----{:?}--so----{:?}", bo, so);
                     boxes_result.push(
                         nms::BBox {
                             x1: bo[0],
@@ -308,8 +312,96 @@ impl AiSession {
         let mut boxes = boxes_result.clone();
 
         boxes.sort_by(|box1, box2| box2.score.total_cmp(&box1.score));
+        // -------------
 
+
+        let mut dt = DrawTarget::new(img_width as _, img_height as _);
+
+        let mut faces = vec![];
         let t_r = nms::nms(boxes_result, 0.5);
+
+        for bbox in &t_r {
+            let mut pb = PathBuilder::new();
+            //          let x1 = ((bbox.x1 / 640.0) * img_width as f32) as f32;
+            //         let y1 = ((bbox.y1 / 640.0) * img_height as f32) as f32;
+            //         let x2 = ((bbox.x2 / 640.0) * img_width as f32) as f32;
+            //         let y2 = ((bbox.y2 / 640.0) * img_height as f32) as f32;
+            //         pb.rect(x1, y1, x2 - x1, y2 - y1);
+
+            // pb.rect(bbox.x1, bbox.y1, bbox.x2 - bbox.x1, bbox.y2 - bbox.y1);
+            // println!("result--22---({},{})----({},{})", bbox.x1, bbox.y1,bbox.x2, bbox.y2,);
+            // result-BOX---(151.95132,225.53683)----(339.87537,479.1383)
+            // result-BOX---(774.05804,149.51135)----(1079.1631,547.2977)
+            // result--22---(-104.04868,-126.463165)----(83.875374,127.1383)
+            // result--22---(-153.94197,-202.48865)----(151.16313,195.2977)
+
+
+
+            // let (img_width, img_height) = (640, 640);
+            //
+            let x1 = ((bbox.x1 / 640.0) * img_width as f32) as f32;
+            let y1 = ((bbox.y1 / 640.0) * img_height as f32) as f32;
+            let x2 = ((bbox.x2 / 640.0) * img_width as f32) as f32;
+            let y2 = ((bbox.y2 / 640.0) * img_height as f32) as f32;
+            pb.rect(x1, y1, x2 - x1, y2 - y1);
+
+            println!("result-BOX---({},{})----({},{})", x1, y1,x2, y2);
+            // result-BOX---(302.95294,255.84335)----(677.6265,543.5225)
+            // result-BOX---(1543.2783,169.60194)----(2151.5813,620.8409)
+
+            // result-BOX---(151.95132,128.27408)----(339.87537,272.50992)
+            // result-BOX---(774.0581,85.034584)----(1079.1631,311.2756)
+
+            let t = original_img.crop_imm(bbox.x1 as _, bbox.y1 as _, (bbox.x2 - bbox.x1) as _, (bbox.y2 - bbox.y1) as _);
+            faces.push(t);
+
+            let path = pb.finish();
+            let color =  SolidSource { r: 0x00, g: 0x10, b: 0x80, a: 0x80 };
+            dt.stroke(
+                &path,
+                &Source::Solid(color),
+                &StrokeStyle {
+                    join: LineJoin::Round,
+                    width: 4.,
+                    ..StrokeStyle::default()
+                },
+                &DrawOptions::new(),
+            );
+        }
+
+
+        let overlay: show_image::Image = dt.into();
+
+        let window = show_image::context()
+            .run_function_wait(move |context| -> std::result::Result<_, String> {
+                let mut window = context
+                    .create_window(
+                        "ort + YOLOv8",
+                        WindowOptions {
+                            size: Some([img_width, img_height]),
+                            ..WindowOptions::default()
+                        },
+                    )
+                    .map_err(|e| e.to_string())?;
+                // window.set_image("baseball", &original_img.as_image_view().map_err(|e| e.to_string())?);
+
+                let tt = original_img.to_rgb8();
+                let image_view = ImageView::new(ImageInfo::new(PixelFormat::Bgr8, tt.width(), tt.height()), tt.as_raw());
+
+
+                window.set_image("baseball", &image_view);
+                window.set_overlay("yolo", &overlay.as_image_view().map_err(|e| e.to_string())?, true);
+                Ok(window.proxy())
+            })
+            .unwrap();
+
+        for event in window.event_channel().unwrap() {
+            if let event::WindowEvent::KeyboardInput(event) = event {
+                if event.input.key_code == Some(event::VirtualKeyCode::Escape) && event.input.state.is_pressed() {
+                    break;
+                }
+            }
+        }
 
         Ok(t_r)
     }

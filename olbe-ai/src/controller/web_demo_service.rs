@@ -35,11 +35,11 @@ pub async fn upload_file2(multipart: Multipart) -> anyhow::Result<String> {
     //     Ok(ff) => {
     //         let tt = ff.unwrap();
     //
-    //         println!("ff---{:?}----{:?}-", tt.name(), tt.file_name());
+    //         //println!("ff---{:?}----{:?}-", tt.name(), tt.file_name());
     //         // tt.
     //
     //         let bb = tt.bytes().await?;
-    //         println!("--{:?}", String::from_utf8(bb.to_vec())?);
+    //         //println!("--{:?}", String::from_utf8(bb.to_vec())?);
     //     }
     //     Err(_) => {}
     // }

@@ -40,7 +40,7 @@ pub async fn after_nest_middleware(
     request: Request,
     next: Next,
 ) -> Response {
-    println!("------after_nest_middleware--");
+    //println!("------after_nest_middleware--");
     let response = next.run(request).await;
     response
 }
@@ -49,7 +49,7 @@ pub async fn static_middleware(
     request: Request,
     next: Next,
 ) -> Response {
-    println!("------static_middleware--");
+    //println!("------static_middleware--");
     let response = next.run(request).await;
     response
 }
@@ -59,7 +59,7 @@ pub async fn api_middleware(
     request: Request,
     next: Next,
 ) -> Response {
-    println!("------api_middleware");
+    //println!("------api_middleware");
     let response = next.run(request).await;
     response
 }
@@ -68,7 +68,7 @@ pub async fn api_hello_middleware(
     request: Request,
     next: Next,
 ) -> Response {
-    println!("------api_hello_middleware");
+    //println!("------api_hello_middleware");
     let response = next.run(request).await;
     response
 }

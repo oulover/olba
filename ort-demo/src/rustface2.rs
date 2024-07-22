@@ -32,7 +32,7 @@ fn main() -> ort::Result<()> {
     let r = r.clone() * r;
 
     let r:f32 = r.iter().map(|o|o.abs()).sum();
-    println!("*---{}",r);
+    //println!("*---{}",r);
 
     // 1-2 = *---472.96747
     // 1-3 = *---504.29126
@@ -49,12 +49,12 @@ fn main() -> ort::Result<()> {
     //
     // let mut index_i = 0;
     // for axis_one in temp {
-    //     println!("{}   ----- {:?}",index_i, axis_one);
+    //     //println!("{}   ----- {:?}",index_i, axis_one);
     //     index_i = index_i+1;
     // }
     //
     // let r:f32 = scores_471.iter().map(|o|o.abs()).sum();
-    // println!("*---{}",r);
+    // //println!("*---{}",r);
 
 
 
@@ -104,17 +104,17 @@ pub fn op_it(f:&str) -> ort::Result<Array<f32,Dim<IxDynImpl>>> {
     }
 
     // 现在 `input` 包含处理后的图像数据
-    //  println!("{:?}", input);
+    //  //println!("{:?}", input);
 
-    // println!(" rgb_img {}",input);
+    // //println!(" rgb_img {}",input);
 
 
     let model = Session::builder()?.commit_from_file(DET_10G_URL)?;
     for i in  model.inputs.iter(){
-        println!("{:?}",i);
+        //println!("{:?}",i);
     }
     for i in  model.outputs.iter(){
-        println!("{:?}",i);
+        //println!("{:?}",i);
     }
     let outputs: SessionOutputs = model.run(inputs!["input.1" => input.view()]?)?;
 
@@ -126,12 +126,12 @@ pub fn op_it(f:&str) -> ort::Result<Array<f32,Dim<IxDynImpl>>> {
     //
     // let mut index_i = 0;
     // for axis_one in temp {
-    //     println!("{}   ----- {:?}",index_i, axis_one);
+    //     //println!("{}   ----- {:?}",index_i, axis_one);
     //     index_i = index_i+1;
     // }
     //
     // let r:f32 = scores_471.iter().map(|o|o.abs()).sum();
-    // println!("*---{}",r);
+    // //println!("*---{}",r);
 
 
     Ok(scores_471)

@@ -104,7 +104,7 @@ pub fn report_detect(
     let font = ab_glyph::FontRef::try_from_slice(&font).map_err(candle_core::Error::wrap)?;
     for (class_index, bboxes_for_class) in bboxes.iter().enumerate() {
         for b in bboxes_for_class.iter() {
-            println!(
+            //println!(
                 "{}: {:?}",
                 coco_classes::NAMES[class_index],
                 b
@@ -197,7 +197,7 @@ pub fn report_pose(
     let h_ratio = initial_h as f32 / h as f32;
     let mut img = img.to_rgb8();
     for b in bboxes.iter() {
-        println!("{b:?}");
+        //println!("{b:?}");
         let xmin = (b.xmin * w_ratio) as i32;
         let ymin = (b.ymin * h_ratio) as i32;
         let dx = (b.xmax - b.xmin) * w_ratio;
@@ -388,9 +388,9 @@ pub fn run<T: Task>(args: Args) -> anyhow::Result<()> {
     let model = args.model()?;
     let vb = unsafe { VarBuilder::from_mmaped_safetensors(&[model], DType::F32, &device)? };
     let model = T::load(vb, multiples)?;
-    println!("model loaded");
+    //println!("model loaded");
     for image_name in args.images.iter() {
-        println!("processing {image_name}");
+        //println!("processing {image_name}");
         let mut image_name = std::path::PathBuf::from(image_name);
         let original_image = image::io::Reader::open(&image_name)?
             .decode()
@@ -423,7 +423,7 @@ pub fn run<T: Task>(args: Args) -> anyhow::Result<()> {
         };
         let image_t = (image_t.unsqueeze(0)?.to_dtype(DType::F32)? * (1. / 255.))?;
         let predictions = model.forward(&image_t)?.squeeze(0)?;
-        println!("generated predictions {predictions:?}");
+        //println!("generated predictions {predictions:?}");
         let image_t = T::report(
             &predictions,
             original_image,
@@ -434,7 +434,7 @@ pub fn run<T: Task>(args: Args) -> anyhow::Result<()> {
             args.legend_size,
         )?;
         image_name.set_extension("pp.jpg");
-        println!("writing {image_name:?}");
+        //println!("writing {image_name:?}");
         image_t.save(image_name)?
     }
 
@@ -474,13 +474,13 @@ pub fn device(cpu: bool) -> Result<Device> {
     } else {
         #[cfg(all(target_os = "macos", target_arch = "aarch64"))]
         {
-            println!(
+            //println!(
                 "Running on CPU, to run on GPU(metal), build this example with `--features metal`"
             );
         }
         #[cfg(not(all(target_os = "macos", target_arch = "aarch64")))]
         {
-            println!("Running on CPU, to run on GPU, build this example with `--features cuda`");
+            //println!("Running on CPU, to run on GPU, build this example with `--features cuda`");
         }
         Ok(Device::Cpu)
     }

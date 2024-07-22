@@ -44,7 +44,7 @@ async fn main() {
 
     let r =  calculate_task_status_now(LeadTaskStatus::Init,start_time,end_time);
 
-    println!("{:?}",r);
+    //println!("{:?}",r);
 }
 
 pub fn calculate_task_status_now(task_status: LeadTaskStatus, start_date: DateTime<Utc>, dead_line: DateTime<Utc>) -> LeadTaskStatus {

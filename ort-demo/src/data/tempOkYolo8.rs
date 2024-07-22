@@ -69,11 +69,11 @@ fn main() -> ort::Result<()> {
 
     let mut boxes = Vec::new();
     let output = output.slice(s![.., .., 0]);
-    println!("output---{:?}", output);
+    //println!("output---{:?}", output);
     for row in output.axis_iter(Axis(0)) {
-        println!("row---{:?}", row);
+        //println!("row---{:?}", row);
         let row: Vec<_> = row.iter().copied().collect();
-        println!("row-Vec--{:?}", row);
+        //println!("row-Vec--{:?}", row);
         let row22: Vec<_> = row.iter().copied().collect();
         let row22: Vec<_> = row22
             .iter()
@@ -81,7 +81,7 @@ fn main() -> ort::Result<()> {
             .skip(4)
             .enumerate()
             .map(|(index, value)| (index, *value)).collect();
-        println!("row22-Vec--{:?}", row22);
+        //println!("row22-Vec--{:?}", row22);
 
         let (class_id, prob) = row
             .iter()

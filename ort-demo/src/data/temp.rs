@@ -75,7 +75,7 @@ fn main() -> std::result::Result<(),  Box<dyn Error>> {
     let output = outputs["output"].try_extract_tensor::<f32>()?.t().into_owned();
 
     let elapsed = now.elapsed();
-    println!("耗时: {:?}", elapsed.as_secs_f64());
+    //println!("耗时: {:?}", elapsed.as_secs_f64());
 
     use std::fs::File;
     use std::io::Read;
@@ -99,10 +99,10 @@ fn main() -> std::result::Result<(),  Box<dyn Error>> {
 
     let mut boxes = Vec::new();
     let sss = s![.., .., ];
-    // println!("123{}",sss.in_ndim(),);
+    // //println!("123{}",sss.in_ndim(),);
     // sss.in_ndim();
     let output = output.slice(sss);
-    // println!("output---{:?}",output);
+    // //println!("output---{:?}",output);
     for row in output.axis_iter(Axis(0)) {
         let row: Vec<_> = row.iter().copied().collect();
         let (class_id, prob) = row
@@ -119,8 +119,8 @@ fn main() -> std::result::Result<(),  Box<dyn Error>> {
         let label = classes.get(class_id).unwrap();
         // let label = YOLOV8_CLASS_LABELS[class_id];
         let xc = row[0] / 256. * (img_width as f32);
-        // println!("row---{}",row.len());
-        // println!("row[0]---{}",row[0]);
+        // //println!("row---{}",row.len());
+        // //println!("row[0]---{}",row[0]);
         let yc = row[1] / 256. * (img_height as f32);
         let w = row[2] / 256. * (img_width as f32);
         let h = row[3] / 256. * (img_height as f32);

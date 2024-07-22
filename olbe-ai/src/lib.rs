@@ -11,7 +11,7 @@ pub fn init() -> Result<()> {
     simple_logger::init().unwrap();
     log::info!("----init app---");
     dotenv::dotenv().ok();
-
+    tracing_subscriber::fmt::init();
     ai::init()?;
 
     Ok(())

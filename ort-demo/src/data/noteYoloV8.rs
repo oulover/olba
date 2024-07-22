@@ -70,9 +70,9 @@ fn main() -> ort::Result<()> {
     let mut boxes = Vec::new(); // 创建一个向量，用于存储检测到的边界框
     let output = output.slice(s![.., .., 0]); // 切片输出张量
     for row in output.axis_iter(Axis(0)) { // 遍历输出张量的每一行
-        println!("row---{:?}", row); // 打印当前行的内容
+        //println!("row---{:?}", row); // 打印当前行的内容
         let row: Vec<_> = row.iter().copied().collect(); // 将当前行转换为向量
-        println!("row-Vec--{:?}", row); // 打印转换后的向量
+        //println!("row-Vec--{:?}", row); // 打印转换后的向量
         let row22: Vec<_> = row.iter().copied().collect(); // 再次将当前行转换为向量
         let row22: Vec<_> = row22
             .iter()
@@ -80,7 +80,7 @@ fn main() -> ort::Result<()> {
             .skip(4) // 跳过前四个元素（边界框坐标）
             .enumerate() // 枚举剩余元素
             .map(|(index, value)| (index, *value)).collect(); // 收集类别ID和概率
-        println!("row22-Vec--{:?}", row22); // 打印收集后的向量
+        //println!("row22-Vec--{:?}", row22); // 打印收集后的向量
 
         let (class_id, prob) = row
             .iter()

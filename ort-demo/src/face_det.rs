@@ -37,13 +37,13 @@ pub fn main222(original_img1: DynamicImage, original_img2: DynamicImage) -> ort:
 
     let h2 = op_it(original_img2)?;
 
-    println!("cosine_similarity  ----  {}", cosine_similarity(&(convert_to_array1(h1.clone()).unwrap()), &convert_to_array1(h2.clone()).unwrap()));
+    //println!("cosine_similarity  ----  {}", cosine_similarity(&(convert_to_array1(h1.clone()).unwrap()), &convert_to_array1(h2.clone()).unwrap()));
 
     let r = h1 - h2;
     let r = r.clone() * r;
 
     let r: f32 = r.iter().map(|o| o.abs()).sum();
-    println!("main222 *---{}", r.sqrt());
+    //println!("main222 *---{}", r.sqrt());
 
     // 1-2 = *---472.96747
     // 1-3 = *---504.29126
@@ -59,12 +59,12 @@ pub fn main222(original_img1: DynamicImage, original_img2: DynamicImage) -> ort:
     //
     // let mut index_i = 0;
     // for axis_one in temp {
-    //     println!("{}   ----- {:?}",index_i, axis_one);
+    //     //println!("{}   ----- {:?}",index_i, axis_one);
     //     index_i = index_i+1;
     // }
     //
     // let r:f32 = scores_471.iter().map(|o|o.abs()).sum();
-    // println!("*---{}",r);
+    // //println!("*---{}",r);
 
 
     Ok(())
@@ -76,7 +76,7 @@ fn convert_to_array1(arr: Array<f32, Dim<IxDynImpl>>) -> Result<Array1<f32>, &'s
     // let arr_dyn = ArrayD::<f32>::from_shape_vec(Dim(IxDynImpl), vec![1.0, 2.0, 3.0]).unwrap();
 
 
-    println!("arr----{:?}", arr.shape());
+    //println!("arr----{:?}", arr.shape());
     let t = arr.len();
     // 将动态维度数组转换为 Array1
     let arr1: Array1<f32> = arr.into_shape(Dim([t as _])).unwrap().into();
@@ -120,17 +120,17 @@ pub fn op_it(original_img: DynamicImage) -> ort::Result<Array<f32, Dim<IxDynImpl
     }
 
     // 现在 `input` 包含处理后的图像数据
-    //  println!("{:?}", input);
+    //  //println!("{:?}", input);
 
-    // println!(" rgb_img {}",input);
+    // //println!(" rgb_img {}",input);
 
 
     let model = Session::builder()?.commit_from_file(DET_10G_URL)?;
     for i in model.inputs.iter() {
-        println!("{:?}", i);
+        //println!("{:?}", i);
     }
     for i in model.outputs.iter() {
-        println!("{:?}", i);
+        //println!("{:?}", i);
     }
     let outputs: SessionOutputs = model.run(inputs!["input.1" => input.view()]?)?;
 
@@ -142,12 +142,12 @@ pub fn op_it(original_img: DynamicImage) -> ort::Result<Array<f32, Dim<IxDynImpl
     //
     // let mut index_i = 0;
     // for axis_one in temp {
-    //     println!("{}   ----- {:?}",index_i, axis_one);
+    //     //println!("{}   ----- {:?}",index_i, axis_one);
     //     index_i = index_i+1;
     // }
     //
     // let r:f32 = scores_471.iter().map(|o|o.abs()).sum();
-    // println!("*---{}",r);
+    // //println!("*---{}",r);
 
 
     Ok(scores_471)
