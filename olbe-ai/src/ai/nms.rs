@@ -7,12 +7,11 @@ pub struct BBox {
     pub x2: f32,
     pub y2: f32,
     pub score: f32,
-    pub class: usize,
 }
 
 impl BBox {
-    pub fn new(x1: f32, y1: f32, x2: f32, y2: f32, score: f32, class: usize) -> Self {
-        BBox { x1, y1, x2, y2, score, class }
+    pub fn new(x1: f32, y1: f32, x2: f32, y2: f32, score: f32) -> Self {
+        BBox { x1, y1, x2, y2, score }
     }
 
     pub fn area(&self) -> f32 {
@@ -54,7 +53,7 @@ pub fn nms(mut bboxes: Vec<BBox>, threshold: f32) -> Vec<BBox> {
                 continue;
             }
 
-            if bboxes[i].class == bboxes[j].class && bboxes[i].iou(&bboxes[j]) > threshold {
+            if  bboxes[i].iou(&bboxes[j]) > threshold {
                 suppressed[j] = true;
             }
         }

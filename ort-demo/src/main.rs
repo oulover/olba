@@ -35,7 +35,7 @@ fn main22() -> ort::Result<()> {
     // 打开图片文件
     let f = "D:\\Temp\\aaa\\w1.jpg";
     let original_img = image::open(Path::new(f)).unwrap();
-    let original_img= original_img.resize_exact(1280, 886, image::imageops::FilterType::Lanczos3);
+    // let original_img= original_img.resize_exact(1280, 886, image::imageops::FilterType::Lanczos3);
     let (img_width, img_height) = (original_img.width(), original_img.height());
 
     // 输入尺寸
@@ -57,6 +57,8 @@ fn main22() -> ort::Result<()> {
         new_width = (new_height as f32 / im_ratio) as u32;
     }
 
+    // let (img_width, img_height) = (new_width, new_height);
+
     // 缩放图片
     let resized_img = original_img.resize_exact(new_width, new_height, image::imageops::FilterType::Lanczos3);
 
@@ -70,9 +72,6 @@ fn main22() -> ort::Result<()> {
     let mut input = Array::zeros((1, 3, 640, 640));
 
     for (x, y, pixel) in new_image.enumerate_pixels() {
-
-
-
         let r = (pixel[0] as f32 - input_mean) / input_std;
         let g = (pixel[1] as f32 - input_mean) / input_std;
         let b = (pixel[2] as f32 - input_mean) / input_std;
@@ -172,7 +171,6 @@ fn main22() -> ort::Result<()> {
     let mut boxes_result = Vec::new();
     // ********************---------------*********************************************************************Start End 中
     {
-
         let stride = 16;
         let scores_471 = outputs["471"].try_extract_tensor::<f32>()?.to_owned();
         let bbox_preds_474 = outputs["474"].try_extract_tensor::<f32>()?.to_owned();
@@ -194,8 +192,8 @@ fn main22() -> ort::Result<()> {
 
         let mut index_i = 0;
         for axis_one in temp {
-            println!("{}   ----- {:?}",index_i, axis_one);
-            index_i = index_i+1;
+            println!("{}   ----- {:?}", index_i, axis_one);
+            index_i = index_i + 1;
         }
 
         let points = input_boxes;
@@ -256,12 +254,8 @@ fn main22() -> ort::Result<()> {
         }
 
 
-
-
-
-
         pos_scores.axis_iter(Axis(0)).zip(pos_bboxes.axis_iter(Axis(0))).for_each(|(so, bo)| {
-            println!("bo----{:?}--so----{:?}",bo,so);
+            println!("bo----{:?}--so----{:?}", bo, so);
             boxes_result.push((
                 BoundingBox {
                     x1: bo[0],
@@ -279,7 +273,6 @@ fn main22() -> ort::Result<()> {
 
     // ********************---------------*********************************************************************Start   大
     {
-
         let stride = 32;
         let scores_471 = outputs["494"].try_extract_tensor::<f32>()?.to_owned();
         let bbox_preds_474 = outputs["497"].try_extract_tensor::<f32>()?.to_owned();
@@ -301,8 +294,8 @@ fn main22() -> ort::Result<()> {
 
         let mut index_i = 0;
         for axis_one in temp {
-            println!("{}   ----- {:?}",index_i, axis_one);
-            index_i = index_i+1;
+            println!("{}   ----- {:?}", index_i, axis_one);
+            index_i = index_i + 1;
         }
 
         let points = input_boxes;
@@ -363,12 +356,8 @@ fn main22() -> ort::Result<()> {
         }
 
 
-
-
-
-
         pos_scores.axis_iter(Axis(0)).zip(pos_bboxes.axis_iter(Axis(0))).for_each(|(so, bo)| {
-            println!("bo----{:?}--so----{:?}",bo,so);
+            println!("bo----{:?}--so----{:?}", bo, so);
             boxes_result.push((
                 BoundingBox {
                     x1: bo[0],
@@ -384,22 +373,9 @@ fn main22() -> ort::Result<()> {
     // ********************---------------*********************************************************************End 中
 
 
-
-
-
-
-
-
-
-
-
-
-
-    for o in &boxes_result{
-        println!("pos_bboxes----{:?}---{}",o.0,o.2);
+    for o in &boxes_result {
+        println!("pos_bboxes----{:?}---{}", o.0, o.2);
     }
-
-
 
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -426,11 +402,11 @@ fn main22() -> ort::Result<()> {
     //     boxes.sort_by(|box1, box2| box2.2.total_cmp(&box1.2));
     // }
 
-    let t_r =  nms::nms(boxes_result.clone().into_iter().map(|o|nms::BBox::new(
-        o.0.x1,o.0.y1,o.0.x2,o.0.y2,o.2,1usize
+    let t_r = nms::nms(boxes_result.clone().into_iter().map(|o| nms::BBox::new(
+        o.0.x1, o.0.y1, o.0.x2, o.0.y2, o.2, 1usize,
     )).collect(), 0.5);
 
-    let  mut result:Vec<_> = t_r.into_iter().map(|o|{
+    let mut result: Vec<_> = t_r.into_iter().map(|o| {
         (
             BoundingBox {
                 x1: o.x1,
@@ -441,13 +417,10 @@ fn main22() -> ort::Result<()> {
         )
     }).collect();
 
-    println!( "result size is {}",result.len());
-    for o in &result{
-        println!("result----{:?}---{}",o.0,o.2);
+    println!("result size is {}", result.len());
+    for o in &result {
+        println!("result----{:?}---{}", o.0, o.2);
     }
-
-
-
 
 
     let mut dt = DrawTarget::new(img_width as _, img_height as _);
@@ -461,9 +434,29 @@ fn main22() -> ort::Result<()> {
         //         let x2 = ((bbox.x2 / 640.0) * img_width as f32) as f32;
         //         let y2 = ((bbox.y2 / 640.0) * img_height as f32) as f32;
         //         pb.rect(x1, y1, x2 - x1, y2 - y1);
-        pb.rect(bbox.x1, bbox.y1, bbox.x2 - bbox.x1, bbox.y2 - bbox.y1);
 
-       let t =  original_img.crop_imm(bbox.x1 as _, bbox.y1 as _, (bbox.x2 - bbox.x1) as _, (bbox.y2 - bbox.y1) as _);
+        pb.rect(bbox.x1, bbox.y1, bbox.x2 - bbox.x1, bbox.y2 - bbox.y1);
+        // println!("result-BOX---({},{})----({},{})", bbox.x1, bbox.y1,bbox.x2, bbox.y2,);
+        // result-BOX---(151.95132,225.53683)----(339.87537,479.1383)
+        // result-BOX---(774.05804,149.51135)----(1079.1631,547.2977)
+
+        // let (img_width, img_height) = (640, 640);
+        //
+        // let x1 = ((bbox.x1 / 640.0) * img_width as f32) as f32;
+        // let y1 = ((bbox.y1 / 640.0) * img_height as f32) as f32;
+        // let x2 = ((bbox.x2 / 640.0) * img_width as f32) as f32;
+        // let y2 = ((bbox.y2 / 640.0) * img_height as f32) as f32;
+        // pb.rect(x1, y1, x2 - x1, y2 - y1);
+
+        //println!("result-BOX---({},{})----({},{})", x1, y1,x2, y2);
+        // result-BOX---(302.95294,255.84335)----(677.6265,543.5225)
+        // result-BOX---(1543.2783,169.60194)----(2151.5813,620.8409)
+
+        // result-BOX---(151.95132,128.27408)----(339.87537,272.50992)
+        // result-BOX---(774.0581,85.034584)----(1079.1631,311.2756)
+
+
+        let t = original_img.crop_imm(bbox.x1 as _, bbox.y1 as _, (bbox.x2 - bbox.x1) as _, (bbox.y2 - bbox.y1) as _);
         faces.push(t);
 
         let path = pb.finish();
@@ -487,7 +480,7 @@ fn main22() -> ort::Result<()> {
     let overlay: show_image::Image = dt.into();
 
 
-    face_det::main222(faces.pop().unwrap_or(original_img.clone()) .clone(),faces.pop().unwrap_or(original_img.clone()) .clone());
+    // face_det::main222(faces.pop().unwrap_or(original_img.clone()) .clone(),faces.pop().unwrap_or(original_img.clone()) .clone());
 
     let window = show_image::context()
         .run_function_wait(move |context| -> Result<_, String> {
@@ -502,7 +495,8 @@ fn main22() -> ort::Result<()> {
                 .map_err(|e| e.to_string())?;
             // window.set_image("baseball", &original_img.as_image_view().map_err(|e| e.to_string())?);
 
-            let tt = faces.pop().unwrap_or(original_img) .to_rgb8();
+            // let tt = faces.pop().unwrap_or(original_img) .to_rgb8();
+            let tt = original_img.to_rgb8();
             let image_view = ImageView::new(ImageInfo::new(PixelFormat::Bgr8, tt.width(), tt.height()), tt.as_raw());
 
 
