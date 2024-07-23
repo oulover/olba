@@ -33,7 +33,7 @@ fn main22() -> ort::Result<()> {
         .commit()?;
 
     // 打开图片文件
-    let f = "D:\\Temp\\aaa\\w1.jpg";
+    let f = "D:\\Temp\\aaa\\tt2.jpg";
     let original_img = image::open(Path::new(f)).unwrap();
     // let original_img= original_img.resize_exact(1280, 886, image::imageops::FilterType::Lanczos3);
     let (img_width, img_height) = (original_img.width(), original_img.height());
@@ -48,6 +48,8 @@ fn main22() -> ort::Result<()> {
     let im_ratio = img_height as f32 / img_width as f32;
     let model_ratio = input_size.1 as f32 / input_size.0 as f32;
 
+
+
     // 计算新的宽度和高度
     let mut new_width = input_size.0;
     let mut new_height = (new_width as f32 * im_ratio) as u32;
@@ -58,6 +60,8 @@ fn main22() -> ort::Result<()> {
     }
 
     // let (img_width, img_height) = (new_width, new_height);
+
+    let det_scale = new_height as f32 /img_height as f32;
 
     // 缩放图片
     let resized_img = original_img.resize_exact(new_width, new_height, image::imageops::FilterType::Lanczos3);
@@ -82,9 +86,9 @@ fn main22() -> ort::Result<()> {
     }
 
     // 现在 `input` 包含处理后的图像数据
-    //  //println!("{:?}", input);
+    //  println!("{:?}", input);
 
-    // //println!(" rgb_img {}",input);
+    // println!(" rgb_img {}",input);
 
 
     let model = Session::builder()?.commit_from_file(DET_10G_URL)?;
@@ -112,9 +116,9 @@ fn main22() -> ort::Result<()> {
     // let output_451 = output_451.into_shape([12800, 4]).unwrap();
     // let output_451 = output_451 * 8.0;
     // let axis_451_0 = output_451.axis_iter(Axis(0));
-    // //println!("output_451 --  {:?}", output_451.shape());
+    // println!("output_451 --  {:?}", output_451.shape());
     // // for axis_one in axis_451_0 {
-    // //     //println!("shape 448 -- {:?}", axis_one);
+    // //     println!("shape 448 -- {:?}", axis_one);
     // // }
     //
     // let mut input_boxes = Array::zeros((12800, 2));
@@ -125,7 +129,7 @@ fn main22() -> ort::Result<()> {
     //     // input_boxes[[index+1,1]] = 0.0;
     // }
     // // for axis_one in input_boxes .axis_iter(Axis(0)){
-    // //      //println!("input_boxes 448 -- {:?}", axis_one);
+    // //      println!("input_boxes 448 -- {:?}", axis_one);
     // //  }
     // let points = input_boxes;
     // let distance = output_451.clone();
@@ -156,9 +160,9 @@ fn main22() -> ort::Result<()> {
     //
     //     bboxes
     // };
-    // //println!("{:?}", temp_box.shape()); // 正确了 bboxes = distance2bbox(anchor_centers, bbox_preds)
+    // println!("{:?}", temp_box.shape()); // 正确了 bboxes = distance2bbox(anchor_centers, bbox_preds)
     // // for axis_one in temp_box .axis_iter(Axis(0)){
-    // //      //println!("temp_box 448 -- {:?}", axis_one);
+    // //      println!("temp_box 448 -- {:?}", axis_one);
     // //  }
     //
     // // 结果
@@ -192,7 +196,7 @@ fn main22() -> ort::Result<()> {
 
         let mut index_i = 0;
         for axis_one in temp {
-            //println!("{}   ----- {:?}", index_i, axis_one);
+            println!("{}   ----- {:?}", index_i, axis_one);
             index_i = index_i + 1;
         }
 
@@ -227,9 +231,9 @@ fn main22() -> ort::Result<()> {
         };
 
 
-        //println!("bbox_preds_474_temp_box  shape {:?}", bbox_preds_474_temp_box.shape()); //  [3200, 4]
+        println!("bbox_preds_474_temp_box  shape {:?}", bbox_preds_474_temp_box.shape()); //  [3200, 4]
         for axis_one in bbox_preds_474_temp_box.axis_iter(Axis(0)) {
-            //println!("bbox_preds_474_temp_box -- {:?}", axis_one);
+            println!("bbox_preds_474_temp_box -- {:?}", axis_one);
         }
         // OK
 
@@ -241,21 +245,21 @@ fn main22() -> ort::Result<()> {
 
         let pos_scores = scores_471.select(Axis(0), &pos_index[..]);
         let pos_bboxes = bbox_preds_474_temp_box.select(Axis(0), &pos_index[..]);
-        let pos_bboxes = pos_bboxes * 2.0;
-        //println!("pos_scores  shape {:?}", pos_scores.shape()); //  [3200, 4]
-        //println!("pos_bboxes  shape {:?}", pos_bboxes.shape()); //  [3200, 4]
+        let pos_bboxes = pos_bboxes / det_scale ;
+        println!("pos_scores  shape {:?}", pos_scores.shape()); //  [3200, 4]
+        println!("pos_bboxes  shape {:?}", pos_bboxes.shape()); //  [3200, 4]
 
         for axis_one in pos_scores.axis_iter(Axis(0)) {
-            //println!("pos_scores -- {:?}", axis_one);
+            println!("pos_scores -- {:?}", axis_one);
         }
 
         for axis_one in pos_bboxes.axis_iter(Axis(0)) {
-            //println!("pos_bboxes -- {:?}", axis_one);
+            println!("pos_bboxes -- {:?}", axis_one);
         }
 
 
         pos_scores.axis_iter(Axis(0)).zip(pos_bboxes.axis_iter(Axis(0))).for_each(|(so, bo)| {
-            //println!("bo----{:?}--so----{:?}", bo, so);
+            println!("bo----{:?}--so----{:?}", bo, so);
             boxes_result.push((
                 BoundingBox {
                     x1: bo[0],
@@ -294,7 +298,7 @@ fn main22() -> ort::Result<()> {
 
         let mut index_i = 0;
         for axis_one in temp {
-            //println!("{}   ----- {:?}", index_i, axis_one);
+            println!("{}   ----- {:?}", index_i, axis_one);
             index_i = index_i + 1;
         }
 
@@ -329,9 +333,9 @@ fn main22() -> ort::Result<()> {
         };
 
 
-        //println!("bbox_preds_474_temp_box  shape {:?}", bbox_preds_474_temp_box.shape()); //  [3200, 4]
+        println!("bbox_preds_474_temp_box  shape {:?}", bbox_preds_474_temp_box.shape()); //  [3200, 4]
         for axis_one in bbox_preds_474_temp_box.axis_iter(Axis(0)) {
-            //println!("bbox_preds_474_temp_box -- {:?}", axis_one);
+            println!("bbox_preds_474_temp_box -- {:?}", axis_one);
         }
         // OK
 
@@ -343,21 +347,21 @@ fn main22() -> ort::Result<()> {
 
         let pos_scores = scores_471.select(Axis(0), &pos_index[..]);
         let pos_bboxes = bbox_preds_474_temp_box.select(Axis(0), &pos_index[..]);
-        let pos_bboxes = pos_bboxes * 2.0;
-        //println!("pos_scores  shape {:?}", pos_scores.shape()); //  [3200, 4]
-        //println!("pos_bboxes  shape {:?}", pos_bboxes.shape()); //  [3200, 4]
+        let pos_bboxes = pos_bboxes / det_scale ;
+        println!("pos_scores  shape {:?}", pos_scores.shape()); //  [3200, 4]
+        println!("pos_bboxes  shape {:?}", pos_bboxes.shape()); //  [3200, 4]
 
         for axis_one in pos_scores.axis_iter(Axis(0)) {
-            //println!("pos_scores -- {:?}", axis_one);
+            println!("pos_scores -- {:?}", axis_one);
         }
 
         for axis_one in pos_bboxes.axis_iter(Axis(0)) {
-            //println!("pos_bboxes -- {:?}", axis_one);
+            println!("pos_bboxes -- {:?}", axis_one);
         }
 
 
         pos_scores.axis_iter(Axis(0)).zip(pos_bboxes.axis_iter(Axis(0))).for_each(|(so, bo)| {
-            //println!("bo----{:?}--so----{:?}", bo, so);
+            println!("bo----{:?}--so----{:?}", bo, so);
             boxes_result.push((
                 BoundingBox {
                     x1: bo[0],
@@ -370,11 +374,11 @@ fn main22() -> ort::Result<()> {
     }
 
 
-    // ********************---------------*********************************************************************End 中
+    // ********************---------------*********************************************************************End  大
 
 
     for o in &boxes_result {
-        //println!("pos_bboxes----{:?}---{}", o.0, o.2);
+        println!("pos_bboxes----{:?}---{}", o.0, o.2);
     }
 
 
@@ -394,7 +398,7 @@ fn main22() -> ort::Result<()> {
     //         .skip(1)
     //         .filter(|box1| {
     //             let x = intersection(&boxes[0].0, &box1.0) / union(&boxes[0].0, &box1.0);
-    //             //println!("skip -- {}",x);
+    //             println!("skip -- {}",x);
     //             x < 0.7
     //         })
     //         .copied()
@@ -417,9 +421,9 @@ fn main22() -> ort::Result<()> {
         )
     }).collect();
 
-    //println!("result size is {}", result.len());
+    println!("result size is {}", result.len());
     for o in &result {
-        //println!("result----{:?}---{}", o.0, o.2);
+        println!("result----{:?}---{}", o.0, o.2);
     }
 
 

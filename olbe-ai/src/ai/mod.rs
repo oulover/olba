@@ -120,10 +120,10 @@ impl AiSession {
         let mut new_width = input_width;
         let mut new_height = (new_width as f32 * im_ratio) as u32;
 
-        // if im_ratio > model_ratio {
-        //     new_height = input_height;
-        //     new_width = (new_height as f32 / im_ratio) as u32;
-        // }
+        if im_ratio > model_ratio {
+            new_height = input_height;
+            new_width = (new_height as f32 / im_ratio) as u32;
+        }
         let original_img = param_img.resize_exact(new_width, new_height, image::imageops::FilterType::Lanczos3);
 
 
@@ -153,7 +153,8 @@ impl AiSession {
 
 
     pub fn get_face_boxes(&self, param_img: &DynamicImage) -> Result<Vec<nms::BBox>> {
-        let param_img= param_img.resize_exact(1280, 886, image::imageops::FilterType::Lanczos3);
+        println!("get_face_boxes --  param_img w-{},h-{}",param_img.width(),param_img.height());
+        // let param_img= param_img.resize_exact(1280, 886, image::imageops::FilterType::Lanczos3);
         let param_img = param_img.clone();
         let (img_width, img_height) = (param_img.width(), param_img.height());
 
@@ -177,6 +178,20 @@ impl AiSession {
             new_height = input_height;
             new_width = (new_height as f32 / im_ratio) as u32;
         }
+
+        let det_scale = new_height as f32 /img_height as f32;
+        // if img_width>input_width || img_height >input_height{
+        //
+        // }else {
+        //     // 计算新的宽度和高度
+        //      new_width = img_width;
+        //      new_height = img_height;
+        //     println!("get_face_ aaaaaaa boxes --  param_img w-{},h-{}",new_width,new_height);
+        // }
+
+        println!("get_face_boxes -- A2 param_img w-{},h-{}",new_width,new_height);
+
+
         let original_img = param_img.resize_exact(new_width, new_height, image::imageops::FilterType::Lanczos3);
 
 
@@ -212,10 +227,17 @@ impl AiSession {
                 let bbox_preds_474 = bbox_preds_474 * (stride as f32);
                 let size: usize = 640 / stride;
 
-                let mut input_boxes = Array::zeros(((size * size) as _, 2));
+                // for axis_one in temp {
+                //     //println!("{}   ----- {:?}", index_i, axis_one);
+                //     index_i = index_i + 1;
+                // }
+
+                let mut input_boxes = Array::zeros(((size * size *2) as _, 2));
 
 
-                for i in 0..((size * size) / 2) {
+
+
+                for i in 0..((size * size) ) {
                     let index = i * 2;
                     input_boxes[[index, 0]] = ((i * stride) % 640) as f32;
                     input_boxes[[index + 1, 0]] = ((i * stride) % 640) as f32;
@@ -260,7 +282,7 @@ impl AiSession {
 
                 let pos_scores = scores_471.select(Axis(0), &pos_index[..]);
                 let pos_bboxes = bbox_preds_474_temp_box.select(Axis(0), &pos_index[..]);
-                let pos_bboxes = pos_bboxes * 2.0;
+                let pos_bboxes = pos_bboxes /det_scale;
 
 
 

@@ -84,7 +84,8 @@ pub async fn upload_file2(mut multipart: Multipart) -> anyhow::Result<String> {
                     // let mat = imgcodecs::imdecode(&x., IMREAD_COLOR)?;
                     highgui::named_window("hello opencv!", 0)?;
                     highgui::imshow("hello opencv!", &mat)?;
-                    highgui::wait_key(3000)?;
+                    highgui::wait_key(1000)?;
+                    highgui::destroy_all_windows().unwrap();
                 }
             }
             if face_img.len() > 1 {
