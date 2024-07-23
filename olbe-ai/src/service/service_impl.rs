@@ -78,7 +78,7 @@ pub async fn upload_file2(mut multipart: Multipart) -> anyhow::Result<String> {
             let face_boxes = ai.get_face_boxes(&img)?;
             let duration = start.elapsed();
             println!("Time elapsed in ai.get_face_boxes(&img)?;            is: {:?} milliseconds", duration.as_millis());
-            let mut face_img = AiSession::get_face_img(&img, &face_boxes);
+            let mut face_img = ai.get_face_img(&img, &face_boxes);
             // if face_img.len() > 0 {
             //     for x in &face_img {
             //         // let feat = ai.get_face_feature(x)?;

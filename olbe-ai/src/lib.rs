@@ -5,6 +5,7 @@ pub mod error;
 pub mod ai;
 pub mod router;
 pub mod controller;
+mod domain;
 
 use anyhow::Result;
 pub fn init() -> Result<()> {

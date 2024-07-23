@@ -80,7 +80,7 @@ impl AiSession {
         Ok(())
     }
 
-    pub fn get_face_img(param_img: &DynamicImage, boxes: &[nms::BBox]) -> Vec<DynamicImage> {
+    pub fn get_face_img(&self, param_img: &DynamicImage, boxes: &[nms::BBox]) -> Vec<DynamicImage> {
         let mut faces = vec![];
 
         for bbox in boxes {
@@ -178,7 +178,6 @@ impl AiSession {
 
         let det_scale = new_height as f32 /img_height as f32;
 
-        let start1 = Instant::now();
 
         let original_img = param_img.resize_exact(new_width, new_height, image::imageops::FilterType::Nearest);
 
@@ -201,17 +200,10 @@ impl AiSession {
             input[[0, 2, y as usize, x as usize]] = b;
         }
 
-        let duration = start1.elapsed();
-        println!("start1 is: {:?} milliseconds", duration.as_millis());
-
-        let start = Instant::now();
-
-
         let outputs = self.det_mod.run(inputs!["input.1" => input.view()]?)?;
-        let duration = start.elapsed();
-        println!("self.det_mod.run is: {:?} milliseconds", duration.as_millis());
 
-        let start = Instant::now();
+
+
         let mut boxes_result = Vec::new();
 
         for modInfo in ModInfo::get_insight() {
@@ -225,9 +217,6 @@ impl AiSession {
 
 
                 let mut input_boxes = Array::zeros(((size * size *2) as _, 2));
-
-
-
 
                 for i in 0..((size * size) ) {
                     let index = i * 2;
@@ -276,11 +265,7 @@ impl AiSession {
                 let pos_bboxes = bbox_preds_474_temp_box.select(Axis(0), &pos_index[..]);
                 let pos_bboxes = pos_bboxes /det_scale;
 
-
-
-
                 pos_scores.axis_iter(Axis(0)).zip(pos_bboxes.axis_iter(Axis(0))).for_each(|(so, bo)| {
-
                     boxes_result.push(
                         nms::BBox {
                             x1: bo[0],
@@ -292,100 +277,9 @@ impl AiSession {
                     )
                 });
             }
-            // ********************---------------*********************************************************************End 中
+
         }
         let t_r = nms::nms(boxes_result, 0.5);
-
-        let duration = start.elapsed();
-        println!("nms::nms is: {:?} milliseconds", duration.as_millis());
-        // let mut boxes = boxes_result.clone();
-        //
-        // boxes.sort_by(|box1, box2| box2.score.total_cmp(&box1.score));
-        // // -------------
-        //
-        //
-        // let mut dt = DrawTarget::new(img_width as _, img_height as _);
-        //
-        //
-
-        // let mut faces = vec![];
-        // for bbox in &t_r {
-        //     let mut pb = PathBuilder::new();
-        //     pb.rect(bbox.x1, bbox.y1, bbox.x2 - bbox.x1, bbox.y2 - bbox.y1);
-        //     // println!("result--22---({},{})----({},{})", bbox.x1, bbox.y1,bbox.x2, bbox.y2,);
-        //     // result-BOX---(151.95132,225.53683)----(339.87537,479.1383)
-        //     // result-BOX---(774.05804,149.51135)----(1079.1631,547.2977)
-        //     // result--22---(-104.04868,-126.463165)----(83.875374,127.1383)
-        //     // result--22---(-153.94197,-202.48865)----(151.16313,195.2977)
-        //
-        //
-        //
-        //     // let (img_width, img_height) = (640, 640);
-        //     //
-        //     // let x1 = ((bbox.x1 / 640.0) * img_width as f32) as f32;
-        //     // let y1 = ((bbox.y1 / 640.0) * img_height as f32) as f32;
-        //     // let x2 = ((bbox.x2 / 640.0) * img_width as f32) as f32;
-        //     // let y2 = ((bbox.y2 / 640.0) * img_height as f32) as f32;
-        //     // pb.rect(x1, y1, x2 - x1, y2 - y1);
-        //     //
-        //     // println!("result-BOX---({},{})----({},{})", x1, y1,x2, y2);
-        //     // result-BOX---(302.95294,255.84335)----(677.6265,543.5225)
-        //     // result-BOX---(1543.2783,169.60194)----(2151.5813,620.8409)
-        //
-        //     // result-BOX---(151.95132,128.27408)----(339.87537,272.50992)
-        //     // result-BOX---(774.0581,85.034584)----(1079.1631,311.2756)
-        //
-        //     let t = original_img.crop_imm(bbox.x1 as _, bbox.y1 as _, (bbox.x2 - bbox.x1) as _, (bbox.y2 - bbox.y1) as _);
-        //     faces.push(t);
-        //
-        //     let path = pb.finish();
-        //     let color =  SolidSource { r: 0x00, g: 0x10, b: 0x80, a: 0x80 };
-        //     dt.stroke(
-        //         &path,
-        //         &Source::Solid(color),
-        //         &StrokeStyle {
-        //             join: LineJoin::Round,
-        //             width: 4.,
-        //             ..StrokeStyle::default()
-        //         },
-        //         &DrawOptions::new(),
-        //     );
-        // }
-        //
-        //
-        // let overlay: show_image::Image = dt.into();
-        //
-        // let window = show_image::context()
-        //     .run_function_wait(move |context| -> std::result::Result<_, String> {
-        //         let mut window = context
-        //             .create_window(
-        //                 "ort + YOLOv8",
-        //                 WindowOptions {
-        //                     size: Some([img_width, img_height]),
-        //                     ..WindowOptions::default()
-        //                 },
-        //             )
-        //             .map_err(|e| e.to_string())?;
-        //         // window.set_image("baseball", &original_img.as_image_view().map_err(|e| e.to_string())?);
-        //
-        //         let tt = param_img.to_rgb8();
-        //         let image_view = ImageView::new(ImageInfo::new(PixelFormat::Bgr8, tt.width(), tt.height()), tt.as_raw());
-        //
-        //
-        //         window.set_image("baseball", &image_view);
-        //         window.set_overlay("yolo", &overlay.as_image_view().map_err(|e| e.to_string())?, true);
-        //         Ok(window.proxy())
-        //     })
-        //     .unwrap();
-        //
-        // for event in window.event_channel().unwrap() {
-        //     if let event::WindowEvent::KeyboardInput(event) = event {
-        //         if event.input.key_code == Some(event::VirtualKeyCode::Escape) && event.input.state.is_pressed() {
-        //             break;
-        //         }
-        //     }
-        // }
-
         Ok(t_r)
     }
 }
