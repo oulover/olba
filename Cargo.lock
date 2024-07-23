@@ -2122,6 +2122,7 @@ dependencies = [
  "opencv",
  "ort",
  "raqote",
+ "rayon",
  "reqwest",
  "serde",
  "serde_json",

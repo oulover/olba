@@ -1,14 +1,15 @@
 use std::marker::PhantomData;
 use std::mem::MaybeUninit;
 use std::sync::{Arc, Mutex, Once};
+use std::time::Instant;
 use ort::{CUDAExecutionProvider, inputs, Session, SessionOutputs};
 use lazy_static::lazy_static;
 use anyhow::Result;
 use image::{DynamicImage, RgbImage};
-use ndarray::{Array, Array1, Axis, Dim, IxDynImpl};
+use ndarray::{Array, Array1, Axis, Dim, IxDynImpl, s};
 use raqote::{DrawOptions, DrawTarget, LineJoin, PathBuilder, SolidSource, Source, StrokeStyle};
 use show_image::{event, ImageInfo, ImageView, PixelFormat, WindowOptions};
-
+use rayon::prelude::*;
 mod nms;
 
 const DET_10G_URL: &str = "D:\\temp\\aaa\\buffalo_l\\det_10g.onnx";
@@ -153,11 +154,7 @@ impl AiSession {
 
 
     pub fn get_face_boxes(&self, param_img: &DynamicImage) -> Result<Vec<nms::BBox>> {
-        println!("get_face_boxes --  param_img w-{},h-{}",param_img.width(),param_img.height());
-        // let param_img= param_img.resize_exact(1280, 886, image::imageops::FilterType::Lanczos3);
-        let param_img = param_img.clone();
         let (img_width, img_height) = (param_img.width(), param_img.height());
-
 
         // 输入尺寸
         let input_width = 640;
@@ -180,26 +177,16 @@ impl AiSession {
         }
 
         let det_scale = new_height as f32 /img_height as f32;
-        // if img_width>input_width || img_height >input_height{
-        //
-        // }else {
-        //     // 计算新的宽度和高度
-        //      new_width = img_width;
-        //      new_height = img_height;
-        //     println!("get_face_ aaaaaaa boxes --  param_img w-{},h-{}",new_width,new_height);
-        // }
 
-        println!("get_face_boxes -- A2 param_img w-{},h-{}",new_width,new_height);
+        let start1 = Instant::now();
 
-
-        let original_img = param_img.resize_exact(new_width, new_height, image::imageops::FilterType::Lanczos3);
-
+        let original_img = param_img.resize_exact(new_width, new_height, image::imageops::FilterType::Nearest);
 
         // 创建一个640x640的黑色图像
         let mut new_image = RgbImage::new(input_width, input_height);
 
         // 将缩放后的图像复制到新图像的左上角
-        let roi = image::imageops::overlay(&mut new_image, &original_img.to_rgb8(), 0, 0);
+       image::imageops::overlay(&mut new_image, &original_img.to_rgb8(), 0, 0);
 
         // 将图像数据转换为ndarray
         let mut input = Array::zeros((1, 3, 640, 640));
@@ -214,9 +201,17 @@ impl AiSession {
             input[[0, 2, y as usize, x as usize]] = b;
         }
 
+        let duration = start1.elapsed();
+        println!("start1 is: {:?} milliseconds", duration.as_millis());
+
+        let start = Instant::now();
+
 
         let outputs = self.det_mod.run(inputs!["input.1" => input.view()]?)?;
+        let duration = start.elapsed();
+        println!("self.det_mod.run is: {:?} milliseconds", duration.as_millis());
 
+        let start = Instant::now();
         let mut boxes_result = Vec::new();
 
         for modInfo in ModInfo::get_insight() {
@@ -227,10 +222,7 @@ impl AiSession {
                 let bbox_preds_474 = bbox_preds_474 * (stride as f32);
                 let size: usize = 640 / stride;
 
-                // for axis_one in temp {
-                //     //println!("{}   ----- {:?}", index_i, axis_one);
-                //     index_i = index_i + 1;
-                // }
+
 
                 let mut input_boxes = Array::zeros(((size * size *2) as _, 2));
 
@@ -288,7 +280,7 @@ impl AiSession {
 
 
                 pos_scores.axis_iter(Axis(0)).zip(pos_bboxes.axis_iter(Axis(0))).for_each(|(so, bo)| {
-                    //println!("bo----{:?}--so----{:?}", bo, so);
+
                     boxes_result.push(
                         nms::BBox {
                             x1: bo[0],
@@ -302,100 +294,97 @@ impl AiSession {
             }
             // ********************---------------*********************************************************************End 中
         }
-
-        let mut boxes = boxes_result.clone();
-
-        boxes.sort_by(|box1, box2| box2.score.total_cmp(&box1.score));
-        // -------------
-
-
-        let mut dt = DrawTarget::new(img_width as _, img_height as _);
-
-
         let t_r = nms::nms(boxes_result, 0.5);
-        let mut faces = vec![];
-        for bbox in &t_r {
-            let mut pb = PathBuilder::new();
-            //          let x1 = ((bbox.x1 / 640.0) * img_width as f32) as f32;
-            //         let y1 = ((bbox.y1 / 640.0) * img_height as f32) as f32;
-            //         let x2 = ((bbox.x2 / 640.0) * img_width as f32) as f32;
-            //         let y2 = ((bbox.y2 / 640.0) * img_height as f32) as f32;
-            //         pb.rect(x1, y1, x2 - x1, y2 - y1);
 
-            pb.rect(bbox.x1, bbox.y1, bbox.x2 - bbox.x1, bbox.y2 - bbox.y1);
-            // println!("result--22---({},{})----({},{})", bbox.x1, bbox.y1,bbox.x2, bbox.y2,);
-            // result-BOX---(151.95132,225.53683)----(339.87537,479.1383)
-            // result-BOX---(774.05804,149.51135)----(1079.1631,547.2977)
-            // result--22---(-104.04868,-126.463165)----(83.875374,127.1383)
-            // result--22---(-153.94197,-202.48865)----(151.16313,195.2977)
+        let duration = start.elapsed();
+        println!("nms::nms is: {:?} milliseconds", duration.as_millis());
+        // let mut boxes = boxes_result.clone();
+        //
+        // boxes.sort_by(|box1, box2| box2.score.total_cmp(&box1.score));
+        // // -------------
+        //
+        //
+        // let mut dt = DrawTarget::new(img_width as _, img_height as _);
+        //
+        //
 
-
-
-            // let (img_width, img_height) = (640, 640);
-            //
-            // let x1 = ((bbox.x1 / 640.0) * img_width as f32) as f32;
-            // let y1 = ((bbox.y1 / 640.0) * img_height as f32) as f32;
-            // let x2 = ((bbox.x2 / 640.0) * img_width as f32) as f32;
-            // let y2 = ((bbox.y2 / 640.0) * img_height as f32) as f32;
-            // pb.rect(x1, y1, x2 - x1, y2 - y1);
-            //
-            // println!("result-BOX---({},{})----({},{})", x1, y1,x2, y2);
-            // result-BOX---(302.95294,255.84335)----(677.6265,543.5225)
-            // result-BOX---(1543.2783,169.60194)----(2151.5813,620.8409)
-
-            // result-BOX---(151.95132,128.27408)----(339.87537,272.50992)
-            // result-BOX---(774.0581,85.034584)----(1079.1631,311.2756)
-
-            let t = original_img.crop_imm(bbox.x1 as _, bbox.y1 as _, (bbox.x2 - bbox.x1) as _, (bbox.y2 - bbox.y1) as _);
-            faces.push(t);
-
-            let path = pb.finish();
-            let color =  SolidSource { r: 0x00, g: 0x10, b: 0x80, a: 0x80 };
-            dt.stroke(
-                &path,
-                &Source::Solid(color),
-                &StrokeStyle {
-                    join: LineJoin::Round,
-                    width: 4.,
-                    ..StrokeStyle::default()
-                },
-                &DrawOptions::new(),
-            );
-        }
-
-
-        let overlay: show_image::Image = dt.into();
-
-        let window = show_image::context()
-            .run_function_wait(move |context| -> std::result::Result<_, String> {
-                let mut window = context
-                    .create_window(
-                        "ort + YOLOv8",
-                        WindowOptions {
-                            size: Some([img_width, img_height]),
-                            ..WindowOptions::default()
-                        },
-                    )
-                    .map_err(|e| e.to_string())?;
-                // window.set_image("baseball", &original_img.as_image_view().map_err(|e| e.to_string())?);
-
-                let tt = param_img.to_rgb8();
-                let image_view = ImageView::new(ImageInfo::new(PixelFormat::Bgr8, tt.width(), tt.height()), tt.as_raw());
-
-
-                window.set_image("baseball", &image_view);
-                window.set_overlay("yolo", &overlay.as_image_view().map_err(|e| e.to_string())?, true);
-                Ok(window.proxy())
-            })
-            .unwrap();
-
-        for event in window.event_channel().unwrap() {
-            if let event::WindowEvent::KeyboardInput(event) = event {
-                if event.input.key_code == Some(event::VirtualKeyCode::Escape) && event.input.state.is_pressed() {
-                    break;
-                }
-            }
-        }
+        // let mut faces = vec![];
+        // for bbox in &t_r {
+        //     let mut pb = PathBuilder::new();
+        //     pb.rect(bbox.x1, bbox.y1, bbox.x2 - bbox.x1, bbox.y2 - bbox.y1);
+        //     // println!("result--22---({},{})----({},{})", bbox.x1, bbox.y1,bbox.x2, bbox.y2,);
+        //     // result-BOX---(151.95132,225.53683)----(339.87537,479.1383)
+        //     // result-BOX---(774.05804,149.51135)----(1079.1631,547.2977)
+        //     // result--22---(-104.04868,-126.463165)----(83.875374,127.1383)
+        //     // result--22---(-153.94197,-202.48865)----(151.16313,195.2977)
+        //
+        //
+        //
+        //     // let (img_width, img_height) = (640, 640);
+        //     //
+        //     // let x1 = ((bbox.x1 / 640.0) * img_width as f32) as f32;
+        //     // let y1 = ((bbox.y1 / 640.0) * img_height as f32) as f32;
+        //     // let x2 = ((bbox.x2 / 640.0) * img_width as f32) as f32;
+        //     // let y2 = ((bbox.y2 / 640.0) * img_height as f32) as f32;
+        //     // pb.rect(x1, y1, x2 - x1, y2 - y1);
+        //     //
+        //     // println!("result-BOX---({},{})----({},{})", x1, y1,x2, y2);
+        //     // result-BOX---(302.95294,255.84335)----(677.6265,543.5225)
+        //     // result-BOX---(1543.2783,169.60194)----(2151.5813,620.8409)
+        //
+        //     // result-BOX---(151.95132,128.27408)----(339.87537,272.50992)
+        //     // result-BOX---(774.0581,85.034584)----(1079.1631,311.2756)
+        //
+        //     let t = original_img.crop_imm(bbox.x1 as _, bbox.y1 as _, (bbox.x2 - bbox.x1) as _, (bbox.y2 - bbox.y1) as _);
+        //     faces.push(t);
+        //
+        //     let path = pb.finish();
+        //     let color =  SolidSource { r: 0x00, g: 0x10, b: 0x80, a: 0x80 };
+        //     dt.stroke(
+        //         &path,
+        //         &Source::Solid(color),
+        //         &StrokeStyle {
+        //             join: LineJoin::Round,
+        //             width: 4.,
+        //             ..StrokeStyle::default()
+        //         },
+        //         &DrawOptions::new(),
+        //     );
+        // }
+        //
+        //
+        // let overlay: show_image::Image = dt.into();
+        //
+        // let window = show_image::context()
+        //     .run_function_wait(move |context| -> std::result::Result<_, String> {
+        //         let mut window = context
+        //             .create_window(
+        //                 "ort + YOLOv8",
+        //                 WindowOptions {
+        //                     size: Some([img_width, img_height]),
+        //                     ..WindowOptions::default()
+        //                 },
+        //             )
+        //             .map_err(|e| e.to_string())?;
+        //         // window.set_image("baseball", &original_img.as_image_view().map_err(|e| e.to_string())?);
+        //
+        //         let tt = param_img.to_rgb8();
+        //         let image_view = ImageView::new(ImageInfo::new(PixelFormat::Bgr8, tt.width(), tt.height()), tt.as_raw());
+        //
+        //
+        //         window.set_image("baseball", &image_view);
+        //         window.set_overlay("yolo", &overlay.as_image_view().map_err(|e| e.to_string())?, true);
+        //         Ok(window.proxy())
+        //     })
+        //     .unwrap();
+        //
+        // for event in window.event_channel().unwrap() {
+        //     if let event::WindowEvent::KeyboardInput(event) = event {
+        //         if event.input.key_code == Some(event::VirtualKeyCode::Escape) && event.input.state.is_pressed() {
+        //             break;
+        //         }
+        //     }
+        // }
 
         Ok(t_r)
     }

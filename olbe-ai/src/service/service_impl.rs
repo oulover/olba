@@ -1,4 +1,5 @@
 use std::fmt::{Debug, Formatter};
+use std::time::Instant;
 use axum::extract::Multipart;
 use image::DynamicImage;
 use opencv::imgcodecs;
@@ -56,6 +57,7 @@ fn dynamic_image_to_mat(image: &DynamicImage) -> Result<Mat, Box<dyn std::error:
 }
 
 pub async fn upload_file2(mut multipart: Multipart) -> anyhow::Result<String> {
+    let start_all = Instant::now();
     let file = multipart.next_field().await;
 
     let ai = AiSession::get_instance()?;
@@ -72,27 +74,35 @@ pub async fn upload_file2(mut multipart: Multipart) -> anyhow::Result<String> {
             // image::open(Path::new(f)).unwrap();
 
             let img = image::load_from_memory(&bytes)?;
+            let start = Instant::now();
             let face_boxes = ai.get_face_boxes(&img)?;
+            let duration = start.elapsed();
+            println!("Time elapsed in ai.get_face_boxes(&img)?;            is: {:?} milliseconds", duration.as_millis());
             let mut face_img = AiSession::get_face_img(&img, &face_boxes);
-            if face_img.len() > 0 {
-                for x in &face_img {
-                    // let feat = ai.get_face_feature(x)?;
-                    // //println!("{:?}", feat)
-
-                    let mat = dynamic_image_to_mat(x).unwrap();
-
-                    // let mat = imgcodecs::imdecode(&x., IMREAD_COLOR)?;
-                    highgui::named_window("hello opencv!", 0)?;
-                    highgui::imshow("hello opencv!", &mat)?;
-                    highgui::wait_key(1000)?;
-                    highgui::destroy_all_windows().unwrap();
-                }
-            }
+            // if face_img.len() > 0 {
+            //     for x in &face_img {
+            //         // let feat = ai.get_face_feature(x)?;
+            //         // //println!("{:?}", feat)
+            //
+            //         let mat = dynamic_image_to_mat(x).unwrap();
+            //
+            //         // let mat = imgcodecs::imdecode(&x., IMREAD_COLOR)?;
+            //         highgui::named_window("hello opencv!", 0)?;
+            //         highgui::imshow("hello opencv!", &mat)?;
+            //         highgui::wait_key(1000)?;
+            //         highgui::destroy_all_windows().unwrap();
+            //     }
+            // }
             if face_img.len() > 1 {
                 let t1 = face_img.pop().unwrap();
                 let t2 = face_img.pop().unwrap();
 
+                  start.elapsed();
+
+                let start = Instant::now();
                let sim=  ai.get_sim(&t1,&t2)?;
+                let duration = start.elapsed();
+                println!("Time elapsed in ai.get_face_boxes(&img)?;    get_sim        is: {:?} milliseconds", duration.as_millis());
 
                 println!("------{sim}")
             }
@@ -103,6 +113,9 @@ pub async fn upload_file2(mut multipart: Multipart) -> anyhow::Result<String> {
         }
         Err(_) => {}
     }
+    let duration = start_all.elapsed();
+    println!("start_all   is: {:?} milliseconds", duration.as_millis());
+
 
     Ok(String::from("123"))
 }
