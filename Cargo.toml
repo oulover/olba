@@ -34,7 +34,7 @@ candle-core="0"
 candle-onnx = "0"
 candle-transformers = "0"
 
-ort = "2.0.0-rc.2"
+ort = "2.0.0-rc.4"
 
 
 clap = { version = "4.2.4", features = ["derive"] }
