@@ -775,6 +775,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "dashmap"
+version = "5.5.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "978747c1d849a7d2ee5e8adc0159961c48fb7e5db2f06af6723b80123bb53856"
+dependencies = [
+ "cfg-if",
+ "hashbrown 0.14.5",
+ "lock_api",
+ "once_cell",
+ "parking_lot_core",
+]
+
+[[package]]
 name = "demoe"
 version = "1.2.3"
 dependencies = [
@@ -1950,11 +1963,11 @@ dependencies = [
 [[package]]
 name = "milvus-sdk-rust"
 version = "0.1.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "39e291050787c486091140a968f4d90759638a55f0883bcf30acc8f0470efaf0"
+source = "git+https://github.com/oulover/milvus-sdk-rust?branch=main#a1e2b029ed11b6d65acdf98608ac033181a12910"
 dependencies = [
  "anyhow",
  "base64 0.21.7",
+ "dashmap",
  "prost",
  "serde",
  "serde_json",
@@ -2338,6 +2351,7 @@ dependencies = [
  "anyhow",
  "axum 0.7.5",
  "bincode",
+ "chrono",
  "csv",
  "dotenv",
  "fast_log",

@@ -3,11 +3,13 @@ use anyhow::Result;
 use milvus::client::Client;
 use milvus::data::FieldColumn;
 use milvus::index::{IndexParams, IndexType};
+use milvus::options::LoadOptions;
+use milvus::query::QueryOptions;
 use milvus::schema::{CollectionSchema, CollectionSchemaBuilder, FieldSchema};
 use rand::Rng;
 // use milvus::client::Client;
 // use milvus::schema::{CollectionSchemaBuilder, FieldSchema};
-use olbe_ai::{init, start};
+use olbe_ai::{ai, init, start};
 const DEFAULT_VEC_FIELD: &str = "embed";
 const DIM: i64 = 256;
 #[tokio::main]
@@ -17,29 +19,24 @@ async fn main() -> Result<()> {
 
 
 
-    const URL: &str = "http://localhost:19530";
-
-    let client = Client::new(URL).await?;
-
-    let schema =
-        CollectionSchemaBuilder::new("hello_milvus", "a guide example for milvus rust SDK")
-            .add_field(FieldSchema::new_primary_int64(
-                "id",
-                "primary key field",
-                true,
-            ))
-            .add_field(FieldSchema::new_float_vector(
-                DEFAULT_VEC_FIELD,
-                "feature field",
-                DIM,
-            ))
-            .build()?;
+    let client = Client::new("http://120.46.194.67:19530").await?;
+    let schema =ai::milvus::UserFaceFeature::schema()?;
     client.create_collection(schema.clone(), None).await?;
 
-    if let Err(err) = hello_milvus(&client, &schema).await {
-        println!("failed to run hello milvus: {:?}", err);
-    }
-    client.drop_collection(schema.name()).await?;
+    let index_params = IndexParams::new(
+        "feature_index".to_owned(),
+        IndexType::IvfFlat,
+        milvus::index::MetricType::IP,
+        HashMap::from([("nlist".to_owned(), "32".to_owned())]),
+    );
+    client
+        .create_index(schema.name(), "feature", index_params)
+        .await?;
+
+    // if let Err(err) = hello_milvus(&client, &schema).await {
+    //     println!("failed to run hello milvus: {:?}", err);
+    // }
+    // // client.drop_collection(schema.name()).await?;
 
 
     start().await?;
@@ -58,20 +55,33 @@ async fn hello_milvus(client: &Client, collection: &CollectionSchema) -> Result<
     let embed_column =
         FieldColumn::new(collection.get_field(DEFAULT_VEC_FIELD).unwrap(), embed_data);
 
-    // client
-    //     .insert(collection.name(), vec![embed_column], None)
-    //     .await?;
+
+
+    client
+        .insert(collection.name(), vec![embed_column], None)
+        .await?;
     client.flush(collection.name()).await?;
     let index_params = IndexParams::new(
         "feature_index".to_owned(),
         IndexType::IvfFlat,
-        milvus::index::MetricType::L2,
+        milvus::index::MetricType::IP,
         HashMap::from([("nlist".to_owned(), "32".to_owned())]),
     );
     client
         .create_index(collection.name(), DEFAULT_VEC_FIELD, index_params)
         .await?;
+    client
+        .load_collection(collection.name(), Some(LoadOptions::default()))
+        .await?;
 
+    let options = QueryOptions::default();
+
+    let result = client.query(collection.name(), "id > 0", &options).await?;
+
+    println!(
+        "result num: {}",
+        result.first().map(|c| c.len()).unwrap_or(0),
+    );
 
     Ok(())
 }

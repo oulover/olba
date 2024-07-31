@@ -1,7 +1,16 @@
+use std::borrow::Cow;
 use std::fmt::{Debug, Formatter};
 use std::time::Instant;
 use axum::extract::Multipart;
+use axum::extract::multipart::Field;
 use image::DynamicImage;
+use milvus::client::Client;
+use milvus::index::MetricType;
+use milvus::mutate::InsertOptions;
+use milvus::options::LoadOptions;
+use milvus::query::{QueryOptions, SearchOptions};
+use milvus::schema::{CollectionSchema, CollectionSchemaBuilder, FieldSchema};
+use milvus::value::Value;
 use opencv::imgcodecs;
 use opencv::imgcodecs::IMREAD_COLOR;
 use crate::ai::AiSession;
@@ -21,15 +30,78 @@ impl DemoService for DemoServiceImpl {
 
         //Ok(String::from("-----demo-----"))
     }
+
+    async fn register_face(&self, mut multipart: Multipart) -> anyhow::Result<Vec<f32>> {
+        let file = multipart.next_field().await?;
+
+
+
+        let client = Client::new("http://120.46.194.67:19530").await?;
+
+
+
+        let ai = AiSession::get_instance()?;
+
+        match file {
+            None => {}
+            Some(tt) => {
+
+                let bb = tt.bytes().await?;
+                let bytes = bb.to_vec();
+
+
+                let img = image::load_from_memory(&bytes)?;
+
+                let face_boxes = ai.get_face_boxes(&img)?;
+
+                let mut face_img = ai.get_face_img(&img, &face_boxes);
+
+                let r = face_img.pop().unwrap();
+
+                let feature = ai.get_face_feature(&r).unwrap();
+                let feature: Vec<_> = feature.iter().map(|o| *o).collect();
+
+               let t =  UserFaceFeature::insert_data(UserFaceFeature{
+                    id: chrono::Utc::now().timestamp(),
+                    feature:feature.clone(),
+                    user_id: chrono::Utc::now().timestamp(),
+                });
+
+                client.insert(UserFaceFeature::schema()?.name(),t.clone(),Some(InsertOptions::default())).await?;
+                client.flush(UserFaceFeature::schema()?.name()).await?;
+                client
+                    .load_collection(UserFaceFeature::schema()?.name(), Some(LoadOptions::default()))
+                    .await?;
+               let   sea_p =  SearchOptions::default().metric_type(MetricType::IP);
+
+               let s= client.search(UserFaceFeature::schema()?.name(),vec![Value::FloatArray(Cow::from(feature))],"feature",& sea_p).await?;
+
+                let options = QueryOptions::default();
+                let result = client.query(UserFaceFeature::schema()?.name(), "id > 0", &options).await?;
+
+                for ss in s{
+                    println!(
+                        "result num: {:?}----{:?}",
+                        ss.field, ss.score,
+                    );
+                }
+
+            }
+        }
+
+
+        Ok(vec![])
+    }
 }
 
 use opencv::{highgui};
 
 use opencv::{
     core::{self, Mat, CV_8UC3},
-
     prelude::*,
 };
+use crate::ai::milvus::UserFaceFeature;
+
 fn dynamic_image_to_mat(image: &DynamicImage) -> Result<Mat, Box<dyn std::error::Error>> {
     // Convert the image to RGB8 format
     let rgb_image = image.to_rgb8();
@@ -97,19 +169,15 @@ pub async fn upload_file2(mut multipart: Multipart) -> anyhow::Result<String> {
                 let t1 = face_img.pop().unwrap();
                 let t2 = face_img.pop().unwrap();
 
-                  start.elapsed();
+                start.elapsed();
 
                 let start = Instant::now();
-               let sim=  ai.get_sim(&t1,&t2)?;
+                let sim = ai.get_sim(&t1, &t2)?;
                 let duration = start.elapsed();
                 println!("Time elapsed in ai.get_face_boxes(&img)?;    get_sim        is: {:?} milliseconds", duration.as_millis());
 
                 println!("------{sim}")
             }
-
-
-
-
         }
         Err(_) => {}
     }

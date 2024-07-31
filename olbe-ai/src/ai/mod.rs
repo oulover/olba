@@ -2,6 +2,7 @@ use std::marker::PhantomData;
 use std::mem::MaybeUninit;
 use std::sync::{Arc, Mutex, Once};
 use std::time::Instant;
+use ::milvus::client::Client;
 use ort::{CUDAExecutionProvider, inputs, Session, SessionOutputs};
 use lazy_static::lazy_static;
 use anyhow::Result;
@@ -11,6 +12,7 @@ use raqote::{DrawOptions, DrawTarget, LineJoin, PathBuilder, SolidSource, Source
 use show_image::{event, ImageInfo, ImageView, PixelFormat, WindowOptions};
 use rayon::prelude::*;
 mod nms;
+pub mod milvus;
 
 const DET_10G_URL: &str = "D:\\temp\\aaa\\buffalo_l\\det_10g.onnx";
 const DET_R50G_URL: &str = "D:\\temp\\aaa\\buffalo_l\\w600k_r50.onnx";
@@ -50,6 +52,7 @@ impl ModInfo {
 pub struct AiSession {
     det_mod: Session,
     feature_mod: Session,
+
 }
 
 fn cosine_similarity(a: &Array1<f32>, b: &Array1<f32>) -> f32 {
@@ -285,12 +288,18 @@ impl AiSession {
 }
 
 impl AiSession {
-    fn new() -> Result<Arc<AiSession>> {
+      fn new() -> Result<Arc<AiSession>> {
         let det = Session::builder()?.commit_from_file(DET_10G_URL)?;
         let feature = Session::builder()?.commit_from_file(DET_R50G_URL)?;
+
+        const URL: &str = "http://localhost:19530";
+
+
+
         Ok(Arc::new(AiSession {
             det_mod: det,
             feature_mod: feature,
+
         }))
     }
 
