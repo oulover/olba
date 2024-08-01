@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use std::sync::Arc;
 use anyhow::Result;
 use milvus::client::Client;
 use milvus::data::FieldColumn;
@@ -9,7 +10,7 @@ use milvus::schema::{CollectionSchema, CollectionSchemaBuilder, FieldSchema};
 use rand::Rng;
 // use milvus::client::Client;
 // use milvus::schema::{CollectionSchemaBuilder, FieldSchema};
-use olbe_ai::{ai, init, start};
+use olbe_ai::{ai, AppContext, configure_di, init, start};
 const DEFAULT_VEC_FIELD: &str = "embed";
 const DIM: i64 = 256;
 #[tokio::main]
@@ -38,8 +39,9 @@ async fn main() -> Result<()> {
     // }
     // // client.drop_collection(schema.name()).await?;
 
+    let app_ctx = AppContext::new(configure_di());
 
-    start().await?;
+    start(Arc::new(app_ctx)).await?;
     Ok(())
 
 }

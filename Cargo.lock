@@ -138,6 +138,20 @@ dependencies = [
 ]
 
 [[package]]
+name = "async-di"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2076e3e844ea7c1369c740cdfade8f772cff5b71c29212272745b17ad133ae76"
+dependencies = [
+ "anyhow",
+ "async-trait",
+ "futures",
+ "thiserror",
+ "tokio",
+ "tracing",
+]
+
+[[package]]
 name = "async-stream"
 version = "0.3.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2349,6 +2363,7 @@ name = "olbe-ai"
 version = "1.2.3"
 dependencies = [
  "anyhow",
+ "async-di",
  "axum 0.7.5",
  "bincode",
  "chrono",

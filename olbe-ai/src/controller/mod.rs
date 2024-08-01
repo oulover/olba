@@ -1,4 +1,5 @@
 mod web_demo_service;
+mod ai_controller;
 
 use anyhow::Error;
 use axum::response::{IntoResponse, Response};
@@ -6,7 +7,7 @@ use axum::Router;
 use axum::routing::get;
 
 pub(crate) fn router() ->Router{
-    Router::new().nest("/user",web_demo_service::router())
+    Router::new().nest("/user",web_demo_service::router()).nest("/face",ai_controller::router())
 }
 
 

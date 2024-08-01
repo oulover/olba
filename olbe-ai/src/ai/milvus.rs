@@ -1,5 +1,25 @@
+use std::sync::Arc;
+use milvus::client::Client;
 use milvus::data::FieldColumn;
 use milvus::schema::{CollectionSchema, CollectionSchemaBuilder, FieldSchema};
+use anyhow::Result;
+use async_di::{Provider, ProvideResult, ResolverRef};
+
+pub type MilvusClient = std::sync::Arc<Client>;
+
+pub struct MilvusClientProvider;
+impl Provider for MilvusClientProvider{
+    type Ref = MilvusClient;
+
+    async fn provide(&self, resolver: &ResolverRef) -> ProvideResult<Self::Ref> {
+        get_client().await.map_err(Into::into)
+    }
+}
+
+pub async fn get_client() -> Result<MilvusClient> {
+    Ok(Arc::new(Client::new("http://120.46.194.67:19530").await?))
+}
+
 
 pub struct UserFaceFeature {
     pub id: i64,
@@ -7,9 +27,8 @@ pub struct UserFaceFeature {
     pub user_id: i64,
 }
 impl UserFaceFeature {
-
-    pub fn insert_data(v: UserFaceFeature)->Vec<FieldColumn>{
-        let mut field:Vec<FieldColumn> = vec![];
+    pub fn insert_data(v: UserFaceFeature) -> Vec<FieldColumn> {
+        let mut field: Vec<FieldColumn> = vec![];
         field.push(Self::id(v.id));
         field.push(Self::feature(v.feature));
         field.push(Self::user_id(v.user_id));

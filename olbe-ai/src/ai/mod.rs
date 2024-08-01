@@ -6,6 +6,7 @@ use ::milvus::client::Client;
 use ort::{CUDAExecutionProvider, inputs, Session, SessionOutputs};
 use lazy_static::lazy_static;
 use anyhow::Result;
+use async_di::{Provider, ProvideResult, ResolverRef};
 use image::{DynamicImage, RgbImage};
 use ndarray::{Array, Array1, Axis, Dim, IxDynImpl, s};
 use raqote::{DrawOptions, DrawTarget, LineJoin, PathBuilder, SolidSource, Source, StrokeStyle};
@@ -14,16 +15,24 @@ use rayon::prelude::*;
 mod nms;
 pub mod milvus;
 
+
+pub type OlAiSession = std::sync::Arc<AiSession>;
+pub struct AiProvider;
+impl Provider for AiProvider{
+    type Ref = OlAiSession;
+
+    async fn provide(&self, resolver: &ResolverRef) -> ProvideResult<Self::Ref> {
+         Ok(AiSession::get_instance()?)
+    }
+}
+
+
+
+
 const DET_10G_URL: &str = "D:\\temp\\aaa\\buffalo_l\\det_10g.onnx";
 const DET_R50G_URL: &str = "D:\\temp\\aaa\\buffalo_l\\w600k_r50.onnx";
 
-pub fn init() -> Result<()> {
-    ort::init()
-        .with_execution_providers([CUDAExecutionProvider::default().build()])
-        .commit()?;
 
-    Ok(())
-}
 
 struct ModInfo {
     pub stride: usize,
@@ -48,7 +57,7 @@ impl ModInfo {
         ]
     }
 }
-
+#[derive(Debug)]
 pub struct AiSession {
     det_mod: Session,
     feature_mod: Session,
@@ -292,8 +301,12 @@ impl AiSession {
         let det = Session::builder()?.commit_from_file(DET_10G_URL)?;
         let feature = Session::builder()?.commit_from_file(DET_R50G_URL)?;
 
-        const URL: &str = "http://localhost:19530";
-
+          pub fn init()->Result<()>{
+              ort::init()
+                  .with_execution_providers([CUDAExecutionProvider::default().build()])
+                  .commit()?;
+              Ok(())
+          }
 
 
         Ok(Arc::new(AiSession {
@@ -302,6 +315,8 @@ impl AiSession {
 
         }))
     }
+
+
 
     pub fn get_instance() -> Result<Arc<AiSession>> {
         lazy_static! {
