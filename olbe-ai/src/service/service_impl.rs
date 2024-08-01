@@ -67,23 +67,45 @@ impl DemoService for DemoServiceImpl {
                     user_id: chrono::Utc::now().timestamp(),
                 });
 
-                client.insert(UserFaceFeature::schema()?.name(),t.clone(),Some(InsertOptions::default())).await?;
-                client.flush(UserFaceFeature::schema()?.name()).await?;
-                client
-                    .load_collection(UserFaceFeature::schema()?.name(), Some(LoadOptions::default()))
-                    .await?;
-               let   sea_p =  SearchOptions::default().metric_type(MetricType::IP);
+                // client.insert(UserFaceFeature::schema()?.name(),t.clone(),Some(InsertOptions::default())).await?;
+                // client.flush(UserFaceFeature::schema()?.name()).await?;
+                // client
+                //     .load_collection(UserFaceFeature::schema()?.name(), Some(LoadOptions::default()))
+                //     .await?;
+               let   sea_p =  SearchOptions::default().metric_type(MetricType::IP).output_fields(vec![String::from("user_id"),String::from("id")]);;
 
                let s= client.search(UserFaceFeature::schema()?.name(),vec![Value::FloatArray(Cow::from(feature))],"feature",& sea_p).await?;
 
-                let options = QueryOptions::default();
-                let result = client.query(UserFaceFeature::schema()?.name(), "id > 0", &options).await?;
+                // let options = QueryOptions::default();
+                //let result = client.query(UserFaceFeature::schema()?.name(), "id > 0", &options).await?;
 
                 for ss in s{
                     println!(
                         "result num: {:?}----{:?}",
                         ss.field, ss.score,
                     );
+
+                    println!(
+                        "result ss.id len: {:?}-",
+                        ss.id.len(),
+                    );
+                    for s_id in ss.id {
+                        match s_id {
+                            Value::None => {println!("---None" );}
+                            Value::Bool(one) => {println!("---{:?}",one);}
+                            Value::Int8(one) => {println!("---{:?}",one);}
+                            Value::Int16(one) => {println!("---{:?}",one);}
+                            Value::Int32(one) => {println!("---{:?}",one);}
+                            Value::Long(one) => {println!("---{:?}",one);}
+                            Value::Float(one) => {println!("---{:?}",one);}
+                            Value::Double(one) => {println!("---{:?}",one);}
+                            Value::FloatArray(one) => {println!("---{:?}",one);}
+                            Value::Binary(one) => {println!("---{:?}",one);}
+                            Value::String(one) => {println!("---{:?}",one);}
+                            Value::Json(one) => {println!("---{:?}",one);}
+                            Value::Array(one) => {println!("---{:?}",one);}
+                        }
+                    }
                 }
 
             }
