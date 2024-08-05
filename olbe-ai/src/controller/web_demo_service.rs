@@ -22,12 +22,6 @@ pub async fn get_info() -> impl IntoResponse {
     R::result(r)
 }
 
-// #[derive(Deserialize)]
-// struct UploadForm {
-//     file: axum::extract::multipart::Multipart,
-// }
-
-
 pub async fn upload_file2(multipart: Multipart) -> anyhow::Result<String> {
     // let file = multipart.next_field().await;
     //
