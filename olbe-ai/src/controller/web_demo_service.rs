@@ -19,7 +19,7 @@ pub async fn get_info() -> impl IntoResponse {
     let svc = DemoServiceImpl;
     let r = svc.set_string().await;
 
-    R::ok(Some(r))
+    R::result(r)
 }
 
 // #[derive(Deserialize)]
@@ -71,12 +71,12 @@ pub async fn register_face(multipart: Multipart) -> anyhow::Result<Vec<f32>> {
     svc.register_face(multipart).await
 }
 pub async fn register_face_web(mut multipart: Multipart) -> impl IntoResponse {
-    RespVO::from_result(register_face(multipart).await).json()
+    R::result(register_face(multipart).await)
 }
 
 
 pub async fn upload_file(mut multipart: Multipart) -> impl IntoResponse {
-    R::ok(Some(upload_file2(multipart).await))
+    R::result(upload_file2(multipart).await)
 }
 
 

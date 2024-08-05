@@ -10,6 +10,7 @@ use axum::response::IntoResponse;
 use axum::routing::post;
 
 use crate::AppContext;
+use crate::controller::R;
 use crate::error::AppError;
 use crate::service::ai_service::{OlAiService, UserFaceFind};
 
@@ -21,18 +22,18 @@ pub(crate) fn router() -> Router {
 
 
 
-pub async fn search(Extension(context): Extension<Arc<AppContext>>, mut multipart: Multipart) -> Result<Json<Vec<UserFaceFind>>> {
+pub async fn search(Extension(context): Extension<Arc<AppContext>>, mut multipart: Multipart) -> Result<R<Vec<UserFaceFind>>> {
     let file = multipart.next_field().await?.ok_or(AppError::NotFound)?;
     let bb = file.bytes().await?;
     let bytes = bb.to_vec();
     let img = image::load_from_memory(&bytes)?;
     let service: OlAiService = context.container.resolve().await?;
     let r = service.search_face(img).await?;
-    Ok(Json(r))
+    Ok(R::ok(Some(r)))
 }
 
 
-pub async fn upload(Extension(context): Extension<Arc<AppContext>>, mut multipart: Multipart)  -> Result<Json<bool>>{
+pub async fn upload(Extension(context): Extension<Arc<AppContext>>, mut multipart: Multipart)  -> Result<R<bool>>{
     let mut uid: Option<String> = None;
     let mut img: Option<Bytes> = None;
     while let Some(field) = multipart.next_field().await? {
@@ -50,7 +51,7 @@ pub async fn upload(Extension(context): Extension<Arc<AppContext>>, mut multipar
             let bytes = img.to_vec();
             let img = image::load_from_memory(&bytes)?;
             let service: OlAiService = context.container.resolve().await?;
-            Ok(Json(service.register_face(uid,img).await?))
+            Ok(R::ok(Some(service.register_face(uid,img).await?)))
         } else {
             Err(anyhow::Error::msg("123").into())
         }
