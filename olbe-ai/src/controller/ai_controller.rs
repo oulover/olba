@@ -22,7 +22,7 @@ pub(crate) fn router() -> Router {
 
 
 
-pub async fn search(Extension(context): Extension<Arc<AppContext>>, mut multipart: Multipart) -> Result<Json<Vec<UserFaceFind>>, AppError> {
+pub async fn search(Extension(context): Extension<Arc<AppContext>>, mut multipart: Multipart) -> Result<Json<Vec<UserFaceFind>>> {
     let file = multipart.next_field().await?.ok_or(AppError::NotFound)?;
     let bb = file.bytes().await?;
     let bytes = bb.to_vec();
