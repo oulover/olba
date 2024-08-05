@@ -1,9 +1,9 @@
 use std::fmt::Display;
-use anyhow::Error;
+
 use axum::http::StatusCode;
 use axum::response::{IntoResponse, Response};
 
-
+pub type Result<T, E = AppError> = core::result::Result<T, E>;
 
 #[derive(Debug )]
 pub enum AppError {

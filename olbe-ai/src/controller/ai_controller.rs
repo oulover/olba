@@ -23,12 +23,12 @@ pub(crate) fn router() -> Router {
 
 
 pub async fn search(Extension(context): Extension<Arc<AppContext>>, mut multipart: Multipart) -> Result<Json<Vec<UserFaceFind>>, AppError> {
-    let file = multipart.next_field().await?.unwrap();
+    let file = multipart.next_field().await?.ok_or(AppError::NotFound)?;
     let bb = file.bytes().await?;
     let bytes = bb.to_vec();
     let img = image::load_from_memory(&bytes)?;
     let service: OlAiService = context.container.resolve().await?;
-     let r = service.search_face(img).await?;
+    let r = service.search_face(img).await?;
     Ok(Json(r))
 }
 
@@ -55,10 +55,10 @@ pub async fn upload(context: Arc<AppContext>, mut multipart: Multipart) -> Resul
             let service: OlAiService = context.container.resolve().await?;
             Ok(service.search_face(img).await?)
         } else {
-            Err(anyhow::Error::msg("123"))
+            Err(anyhow::Error::msg("123").into())
         }
     } else {
-        Err(anyhow::Error::msg("123"))
+        Err(anyhow::Error::msg("123").into())
     }
 }
 
