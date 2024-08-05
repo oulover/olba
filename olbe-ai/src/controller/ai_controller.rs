@@ -10,7 +10,6 @@ use axum::response::IntoResponse;
 use axum::routing::post;
 
 use crate::AppContext;
-use crate::controller::RespVO;
 use crate::error::AppError;
 use crate::service::ai_service::{OlAiService, UserFaceFind};
 

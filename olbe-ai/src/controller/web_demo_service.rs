@@ -3,8 +3,7 @@ use axum::{Form, Router};
 use axum::extract::Multipart;
 use axum::extract::multipart::{Field, MultipartError};
 use axum::routing::{get, post};
-use serde::Deserialize;
-use crate::controller::RespVO;
+use crate::controller::R;
 use crate::service::service::DemoService;
 use crate::service::service_impl::DemoServiceImpl;
 
@@ -20,7 +19,7 @@ pub async fn get_info() -> impl IntoResponse {
     let svc = DemoServiceImpl;
     let r = svc.set_string().await;
 
-    RespVO::from_result(r).json()
+    R::ok(Some(r))
 }
 
 // #[derive(Deserialize)]
@@ -77,7 +76,7 @@ pub async fn register_face_web(mut multipart: Multipart) -> impl IntoResponse {
 
 
 pub async fn upload_file(mut multipart: Multipart) -> impl IntoResponse {
-    RespVO::from_result(upload_file2(multipart).await).json()
+    R::ok(Some(upload_file2(multipart).await))
 }
 
 

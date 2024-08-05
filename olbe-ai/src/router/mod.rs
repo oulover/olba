@@ -7,7 +7,6 @@ use axum::routing::get;
 use crate::service::service::DemoService;
 use crate::service::service_impl::DemoServiceImpl;
 use crate::{AppContext, controller};
-use crate::controller::RespVO;
 
 pub fn init() -> Result<()> {
     Ok(())
