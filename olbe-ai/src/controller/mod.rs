@@ -1,3 +1,4 @@
+use std::fmt::Display;
 use axum::response::IntoResponse;
 use axum::Router;
 use serde::{Deserialize, Serialize};
@@ -29,7 +30,7 @@ where
     T: Serialize + DeserializeOwned + Clone,
 
 {
-    pub fn from_result(result: anyhow::Result<T>  ) -> Self {
+    pub fn from_result<S:Display>(result: Result<T,S>  ) -> Self {
         match result {
             Ok(data) => Self {
                 code: Some(CODE_SUCCESS.to_string()),

@@ -1,9 +1,8 @@
 use std::fmt::Display;
-
+use anyhow::Error;
 use axum::http::StatusCode;
 use axum::response::{IntoResponse, Response};
 
-pub type Result<T, E = AppError> = core::result::Result<T, E>;
 
 
 #[derive(Debug )]
@@ -39,6 +38,7 @@ impl Display for AppError{
 }
 
 
+
 impl <T> From<T> for AppError
 where T:Into<anyhow::Error>{
     fn from(value: T) -> Self {
@@ -46,4 +46,6 @@ where T:Into<anyhow::Error>{
         Self::ErrorMsg {msg:r.to_string()}
     }
 }
+
+
 
