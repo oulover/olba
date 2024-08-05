@@ -1,22 +1,15 @@
+use axum::response::IntoResponse;
+use axum::Router;
+use serde::{Deserialize, Serialize};
+use serde::de::DeserializeOwned;
+
 mod web_demo_service;
 mod ai_controller;
-
-use std::sync::Arc;
-use anyhow::Error;
-use axum::response::{IntoResponse, Response};
-use axum::Router;
-use axum::routing::get;
 
 pub(crate) fn router() ->Router{
     Router::new().nest("/user",web_demo_service::router()).nest("/face",ai_controller::router())
 }
 
-
-
-
-use serde::de::DeserializeOwned;
-use serde::{Deserialize, Serialize};
-use crate::AppContext;
 
 pub const CODE_SUCCESS: &str = "200";
 pub const CODE_FAIL: &str = "500";
@@ -34,8 +27,9 @@ pub struct RespVO<T> {
 impl<T> RespVO<T>
 where
     T: Serialize + DeserializeOwned + Clone,
+
 {
-    pub fn from_result(result: anyhow::Result<T>) -> Self {
+    pub fn from_result(result: anyhow::Result<T>  ) -> Self {
         match result {
             Ok(data) => Self {
                 code: Some(CODE_SUCCESS.to_string()),

@@ -1,14 +1,13 @@
-use std::convert::Infallible;
-use std::fmt::{Debug, Display, Formatter};
-use std::future::Future;
+use std::fmt::{Debug, Display};
 use std::str::FromStr;
 use std::sync::Arc;
-use axum::response::{IntoResponse, Response};
-use axum::{Extension, Json, Router};
-use axum::extract::{Multipart, Request, State};
-use axum::routing::post;
+
 use anyhow::Result;
-use axum::body::{Body, Bytes};
+use axum::{Extension, Json, Router};
+use axum::body::Bytes;
+use axum::extract::Multipart;
+use axum::response::IntoResponse;
+use axum::routing::post;
 
 use crate::AppContext;
 use crate::controller::RespVO;
@@ -25,10 +24,10 @@ pub(crate) fn router() -> Router {
 
 
 pub async fn search_resp(Extension(context): Extension<Arc<AppContext>>, multipart: Multipart) -> Result<Json<Vec<UserFaceFind>>,AppError> {
-   let r = search(context, multipart).await.map_err(|o|AppError::InnerError)?;
+    let r = search(context, multipart).await?;
     Ok(Json(r))
 }
-pub async fn search(context: Arc<AppContext>, mut multipart: Multipart) -> Result<Vec<UserFaceFind>> {
+pub async fn search(context: Arc<AppContext>, mut multipart: Multipart) -> Result<Vec<UserFaceFind>,AppError> {
     let file = multipart.next_field().await?.unwrap();
     let bb = file.bytes().await?;
     let bytes = bb.to_vec();
