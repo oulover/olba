@@ -2364,6 +2364,7 @@ version = "1.2.3"
 dependencies = [
  "anyhow",
  "async-di",
+ "async-trait",
  "axum 0.7.5",
  "bincode",
  "chrono",
@@ -2385,6 +2386,7 @@ dependencies = [
  "serde_json",
  "show-image",
  "simple_logger",
+ "thiserror",
  "tokio",
  "tower-http",
  "tracing",

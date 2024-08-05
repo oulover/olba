@@ -7,6 +7,7 @@ use async_di::{Provider, ProvideResult, ResolverRef};
 use axum::extract::Multipart;
 use ort::CUDAExecutionProvider;
 use anyhow::Result;
+use axum::async_trait;
 use image::DynamicImage;
 use milvus::client::Client;
 use milvus::data::FieldColumn;
@@ -19,11 +20,13 @@ use crate::ai::milvus::{MilvusClient, UserFaceFeature};
 use crate::service::ai_service::{AiService, OlAiService, UserFaceFind};
 
 pub struct AiServiceProvider;
+
+#[async_trait::async_trait]
 impl Provider for AiServiceProvider {
     type Ref = OlAiService;
 
     async fn provide(&self, resolver: &ResolverRef) -> ProvideResult<Self::Ref> {
-        Ok()
+        Ok(Arc::new(AiServiceImpl::new(resolver.resolve().await?,resolver.resolve().await?)? ))
     }
 }
 
@@ -40,7 +43,7 @@ impl AiServiceImpl {
         Ok(Self { ai_session, milvus_client, _unused: Default::default() })
     }
 }
-
+#[async_trait::async_trait]
 impl AiService for AiServiceImpl {
     async fn search_face(&self, face_img: DynamicImage) -> anyhow::Result<Vec<UserFaceFind>> {
         let face_boxes = self.ai_session.get_face_boxes(&face_img)?;
@@ -63,7 +66,7 @@ impl AiService for AiServiceImpl {
                 acc.entry(field.name.clone()).or_insert(field);
                 acc
             });
-            let user_ids = t.get(&String::from("user_ids"));
+            let user_ids = t.get(&String::from("user_id"));
             let ids = t.get(&String::from("id"));
             if let Some(user_ids) = user_ids {
                 if let Some(ids) = ids {

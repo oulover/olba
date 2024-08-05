@@ -1,12 +1,16 @@
+use std::convert::Infallible;
 use std::fmt::{Debug, Display, Formatter};
+use std::future::Future;
 use std::str::FromStr;
-use axum::response::IntoResponse;
+use std::sync::Arc;
+use axum::response::{IntoResponse, Response};
 use axum::{Extension, Router};
-use axum::extract::Multipart;
+use axum::extract::{Multipart, Request, State};
 use axum::routing::post;
 use anyhow::Result;
-use axum::body::Bytes;
+use axum::body::{Body, Bytes};
 use log::Level::Error;
+
 use crate::AppContext;
 use crate::controller::RespVO;
 use crate::service::ai_service::{OlAiService, UserFaceFind};
@@ -15,12 +19,15 @@ pub(crate) fn router() -> Router {
     Router::new()
         .route("/search", post(search_resp))
         .route("/upload", post(upload_resp))
+
 }
 
-pub async fn search_resp(Extension(context): Extension<AppContext>, multipart: Multipart) -> impl IntoResponse {
+
+
+pub async fn search_resp(Extension(context): Extension<Arc<AppContext>>, multipart: Multipart) -> impl IntoResponse {
     RespVO::from_result(search(context, multipart).await).json()
 }
-pub async fn search(context: AppContext, mut multipart: Multipart) -> Result<Vec<UserFaceFind>> {
+pub async fn search(context: Arc<AppContext>, mut multipart: Multipart) -> Result<Vec<UserFaceFind>> {
     let file = multipart.next_field().await?.unwrap();
     let bb = file.bytes().await?;
     let bytes = bb.to_vec();
@@ -29,10 +36,10 @@ pub async fn search(context: AppContext, mut multipart: Multipart) -> Result<Vec
     service.search_face(img).await
 }
 
-pub async fn upload_resp(Extension(context): Extension<AppContext>, multipart: Multipart) -> impl IntoResponse {
+pub async fn upload_resp(Extension(context): Extension<Arc<AppContext>>, multipart: Multipart) -> impl IntoResponse {
     RespVO::from_result(upload(context, multipart).await).json()
 }
-pub async fn upload(context: AppContext, mut multipart: Multipart) -> Result<Vec<UserFaceFind>> {
+pub async fn upload(context: Arc<AppContext>, mut multipart: Multipart) -> Result<Vec<UserFaceFind>> {
     let mut uid:Option<String> =None;
     let mut img:Option<Bytes> =None;
     while let Some(field) = multipart.next_field().await? {
@@ -59,7 +66,7 @@ pub async fn upload(context: AppContext, mut multipart: Multipart) -> Result<Vec
     }
 
 }
-pub struct MyError;
+
 
 
 

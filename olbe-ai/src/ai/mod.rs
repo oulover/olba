@@ -6,7 +6,7 @@ use ::milvus::client::Client;
 use ort::{CUDAExecutionProvider, inputs, Session, SessionOutputs};
 use lazy_static::lazy_static;
 use anyhow::Result;
-use async_di::{Provider, ProvideResult, ResolverRef};
+use async_di::{ Provider, ProvideResult, ResolverRef};
 use image::{DynamicImage, RgbImage};
 use ndarray::{Array, Array1, Axis, Dim, IxDynImpl, s};
 use raqote::{DrawOptions, DrawTarget, LineJoin, PathBuilder, SolidSource, Source, StrokeStyle};
@@ -18,6 +18,8 @@ pub mod milvus;
 
 pub type OlAiSession = std::sync::Arc<AiSession>;
 pub struct AiProvider;
+
+#[async_trait::async_trait]
 impl Provider for AiProvider{
     type Ref = OlAiSession;
 

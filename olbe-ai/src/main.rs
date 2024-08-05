@@ -39,7 +39,7 @@ async fn main() -> Result<()> {
     // }
     // // client.drop_collection(schema.name()).await?;
 
-    let app_ctx = AppContext::new(configure_di());
+    let app_ctx = AppContext::new(configure_di()?);
 
     start(Arc::new(app_ctx)).await?;
     Ok(())

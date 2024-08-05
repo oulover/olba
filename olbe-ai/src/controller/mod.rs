@@ -1,6 +1,7 @@
 mod web_demo_service;
 mod ai_controller;
 
+use std::sync::Arc;
 use anyhow::Error;
 use axum::response::{IntoResponse, Response};
 use axum::Router;
@@ -15,6 +16,7 @@ pub(crate) fn router() ->Router{
 
 use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
+use crate::AppContext;
 
 pub const CODE_SUCCESS: &str = "200";
 pub const CODE_FAIL: &str = "500";
