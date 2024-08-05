@@ -2,7 +2,7 @@ use std::fmt::{Debug, Display};
 use std::str::FromStr;
 use std::sync::Arc;
 
-use anyhow::Result;
+use crate::error::Result;
 use axum::{Extension, Json, Router};
 use axum::body::Bytes;
 use axum::extract::Multipart;
