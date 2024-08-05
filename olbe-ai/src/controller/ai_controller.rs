@@ -17,7 +17,7 @@ use crate::service::ai_service::{OlAiService, UserFaceFind};
 pub(crate) fn router() -> Router {
     Router::new()
         .route("/search", post(search))
-        .route("/upload", post(upload_resp))
+        .route("/upload", post(upload))
 }
 
 
@@ -32,10 +32,8 @@ pub async fn search(Extension(context): Extension<Arc<AppContext>>, mut multipar
     Ok(Json(r))
 }
 
-pub async fn upload_resp(Extension(context): Extension<Arc<AppContext>>, multipart: Multipart) -> impl IntoResponse {
-    RespVO::from_result(upload(context, multipart).await).json()
-}
-pub async fn upload(context: Arc<AppContext>, mut multipart: Multipart) -> Result<Vec<UserFaceFind>> {
+
+pub async fn upload(Extension(context): Extension<Arc<AppContext>>, mut multipart: Multipart)  -> Result<Json<bool>>{
     let mut uid: Option<String> = None;
     let mut img: Option<Bytes> = None;
     while let Some(field) = multipart.next_field().await? {
@@ -53,7 +51,7 @@ pub async fn upload(context: Arc<AppContext>, mut multipart: Multipart) -> Resul
             let bytes = img.to_vec();
             let img = image::load_from_memory(&bytes)?;
             let service: OlAiService = context.container.resolve().await?;
-            Ok(service.search_face(img).await?)
+            Ok(Json(service.register_face(uid,img).await?))
         } else {
             Err(anyhow::Error::msg("123").into())
         }
