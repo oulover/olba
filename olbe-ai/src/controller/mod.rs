@@ -3,13 +3,20 @@ use std::fmt::Display;
 use axum::{Json, Router};
 use axum::response::{IntoResponse, Response};
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
-use serde::de::DeserializeOwned;
+use crate::error::AppError;
+
 
 mod web_demo_service;
 mod ai_controller;
 
 pub(crate) fn router() -> Router {
     Router::new().nest("/user", web_demo_service::router()).nest("/face", ai_controller::router())
+}
+
+impl IntoResponse for AppError {
+    fn into_response(self) -> Response {
+        <R<()> as IntoResponse>::into_response(R::from(self))
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -50,6 +57,15 @@ pub struct R<T> {
     pub code: Code,
     pub msg: Option<String>,
     pub data: Option<T>,
+}
+impl <T> From<AppError> for R<T>{
+    fn from(value: AppError) -> Self {
+       match value {
+           AppError::NotFound => {Self::new(Code::Err400,None,Some(AppError::NotFound.to_string()))}
+           AppError::InnerError => {Self::new(Code::Err500,None,Some(AppError::InnerError.to_string()))}
+           AppError::ErrorMsg { msg } =>  {Self::new(Code::Err500,None,Some(msg))}
+       }
+    }
 }
 
 

@@ -1,5 +1,5 @@
 [workspace]
-members = [  "ort-demo","demoe", "olbe-ai"]
+members = [  "ort-demo","demoe", "olbe-ai", "olbe-grpc"]
 resolver = "2"
 [workspace.package]
 
@@ -18,7 +18,7 @@ rust-version = "1.71.0"
 [workspace.dependencies]
 log = "0.4"
 fast_log = "1.5"
-
+tonic="0.12"
 tokio = "1"
 axum = "0"
 tower-http = "0"
@@ -74,3 +74,6 @@ ab_glyph = "0.2.23"
 accelerate-src = { version = "0.3.2" }
 anyhow = { version = "1", features = ["backtrace"] }
 byteorder = "1.4.3"
+tonic-build = "0.12.1"
+walkdir = "2"
+

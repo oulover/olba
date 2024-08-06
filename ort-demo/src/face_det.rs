@@ -2,7 +2,7 @@
 
 
 use image::{DynamicImage, GenericImageView, RgbImage};
-use ndarray::{Array, Array1, ArrayD, Dim, IxDynImpl};
+use ndarray::{Array, Array1, Dim, IxDynImpl};
 // use ndarray_linalg::Norm;
 use ort::{inputs, Session, SessionOutputs};
 
@@ -71,7 +71,7 @@ pub fn main222(original_img1: DynamicImage, original_img2: DynamicImage) -> ort:
 }
 
 fn convert_to_array1(arr: Array<f32, Dim<IxDynImpl>>) -> Result<Array1<f32>, &'static str> {
-    use ndarray::IxDyn;
+    
     // 创建一个动态维度的数组，但这里是一维的
     // let arr_dyn = ArrayD::<f32>::from_shape_vec(Dim(IxDynImpl), vec![1.0, 2.0, 3.0]).unwrap();
 
@@ -134,7 +134,7 @@ pub fn op_it(original_img: DynamicImage) -> ort::Result<Array<f32, Dim<IxDynImpl
     }
     let outputs: SessionOutputs = model.run(inputs!["input.1" => input.view()]?)?;
 
-    let mut scores_471 = outputs["683"].try_extract_tensor::<f32>()?.to_owned();
+    let scores_471 = outputs["683"].try_extract_tensor::<f32>()?.to_owned();
 
     //let scores_471 = scores_471.clone() * scores_471;
 

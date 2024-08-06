@@ -21,7 +21,7 @@ impl Provider for AiServiceProvider {
     type Ref = OlAiService;
 
     async fn provide(&self, resolver: &ResolverRef) -> ProvideResult<Self::Ref> {
-        Ok(Arc::new(AiServiceImpl::new(resolver.resolve().await?,resolver.resolve().await?)? ))
+        Ok(Arc::new(AiServiceImpl::new(resolver.resolve().await?, resolver.resolve().await?)?))
     }
 }
 
@@ -40,7 +40,8 @@ impl AiServiceImpl {
 }
 #[async_trait::async_trait]
 impl AiService for AiServiceImpl {
-    async fn search_face(&self, face_img: DynamicImage) -> anyhow::Result<Vec<UserFaceFind>> {
+    async fn search_face(&self, radius: Option<f32>, limit: Option<u32>, face_img_byte: &[u8]) -> Result<Vec<UserFaceFind>> {
+        let face_img = image::load_from_memory(face_img_byte)?;
         let face_boxes = self.ai_session.get_face_boxes(&face_img)?;
 
         let mut face_img = self.ai_session.get_face_img(&face_img, &face_boxes);
@@ -50,12 +51,21 @@ impl AiService for AiServiceImpl {
         let feature = self.ai_session.get_face_feature(&r)?;
         let feature: Vec<_> = feature.iter().map(|o| *o).collect();
 
-        let sea_p = SearchOptions::default().metric_type(MetricType::IP)
+        let mut search_opt = SearchOptions::default()
+
+            .metric_type(MetricType::IP)
             .output_fields(vec![String::from("user_id"), String::from("id")]);
+
+        if let Some(limit) = limit {
+            search_opt = search_opt.limit(limit as _);
+        }
+        if let Some(radius) = radius {
+            search_opt = search_opt.radius(radius);
+        }
 
         let search = self.milvus_client.search(UserFaceFeature::schema()?.name(),
                                                vec![Value::FloatArray(Cow::from(feature))],
-                                               "feature", &sea_p).await?;
+                                               "feature", &search_opt).await?;
 
         let mut users = vec![];
         for s in search {

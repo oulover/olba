@@ -8,6 +8,7 @@ pub mod router;
 pub mod controller;
 mod domain;
 pub mod di;
+mod grpc;
 
 use std::sync::Arc;
 use anyhow::Result;
@@ -46,6 +47,7 @@ pub fn configure_di() -> Result<Container> {
 
 
 pub async fn start(app_context: Arc<AppContext>) -> Result<()> {
+    grpc::server::start_grpc_server(app_context.clone()).await;
     router::start(app_context).await?;
     Ok(())
 }

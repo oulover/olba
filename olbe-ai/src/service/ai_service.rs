@@ -9,7 +9,7 @@ pub type OlAiService = std::sync::Arc<dyn AiService>;
 
 #[async_trait::async_trait]
 pub trait AiService: Sync + Send + Debug {
-    async fn search_face(&self, face_img: DynamicImage)-> Result<Vec<UserFaceFind>>;
+    async fn search_face(&self,  radius: Option<f32>, limit: Option<u32>, face_img:&[u8])-> Result<Vec<UserFaceFind>>;
     async fn register_face(&self,user_id:i64, face_img: DynamicImage) -> Result<bool>;
 }
 

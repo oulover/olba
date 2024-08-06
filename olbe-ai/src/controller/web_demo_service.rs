@@ -1,7 +1,6 @@
-use axum::response::{IntoResponse, Response};
-use axum::{Form, Router};
+use axum::response::IntoResponse;
+use axum::Router;
 use axum::extract::Multipart;
-use axum::extract::multipart::{Field, MultipartError};
 use axum::routing::{get, post};
 use crate::controller::R;
 use crate::service::service::DemoService;
@@ -64,12 +63,12 @@ pub async fn register_face(multipart: Multipart) -> anyhow::Result<Vec<f32>> {
     let svc = DemoServiceImpl;
     svc.register_face(multipart).await
 }
-pub async fn register_face_web(mut multipart: Multipart) -> impl IntoResponse {
+pub async fn register_face_web(multipart: Multipart) -> impl IntoResponse {
     R::result(register_face(multipart).await)
 }
 
 
-pub async fn upload_file(mut multipart: Multipart) -> impl IntoResponse {
+pub async fn upload_file(multipart: Multipart) -> impl IntoResponse {
     R::result(upload_file2(multipart).await)
 }
 

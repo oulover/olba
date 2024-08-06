@@ -9,6 +9,7 @@ edition.workspace = true
 rust-version.workspace = true
 
 [dependencies]
+olbe-grpc = {path = "../olbe-grpc",features = ["server"]}
 
 tokio = { version = "1", features = ["full"] }
 log = "0.4"
@@ -48,3 +49,5 @@ chrono = "0.4.38"
 async-di = "0.1.0"
 async-trait = "0.1.81"
 thiserror = "1.0.63"
+
+tonic =  {workspace = true}

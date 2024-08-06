@@ -1,0 +1,23 @@
+syntax = "proto3";
+
+package olbe.grpc.ai.face;
+
+message FaceResult {
+    int64 id = 1;
+    int64 user_id = 2;
+    float score = 3;
+}
+
+message SearchFaceRequest {
+    optional float radius = 1;
+    optional uint32 limit = 2;
+    bytes feature = 3;
+}
+
+message SearchFaceReply {
+    repeated FaceResult results = 1;
+}
+
+service AiFace {
+    rpc Search (SearchFaceRequest) returns (SearchFaceReply) {}
+}

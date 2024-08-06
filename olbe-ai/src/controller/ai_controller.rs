@@ -1,4 +1,4 @@
-use std::fmt::{Debug, Display};
+use std::io::Read;
 use std::str::FromStr;
 use std::sync::Arc;
 
@@ -21,12 +21,27 @@ pub(crate) fn router() -> Router {
 
 
 pub async fn search(Extension(context): Extension<Arc<AppContext>>, mut multipart: Multipart) -> Result<R<Vec<UserFaceFind>>> {
-    let file = multipart.next_field().await?.ok_or(AppError::NotFound)?;
-    let bb = file.bytes().await?;
-    let bytes = bb.to_vec();
-    let img = image::load_from_memory(&bytes)?;
+
+    let mut radius: Option<f32> = None;
+    let mut limit: Option<u32> = None;
+    let mut file: Option<Bytes> = None;
+    while let Some(field) = multipart.next_field().await? {
+        if let Some(name) = field.name() {
+            if name.eq("radius") {
+                radius = Some(field.text().await?.parse()?);
+            } else if name.eq("file") {
+                file = Some(field.bytes().await?)
+            }else if name.eq("limit") {
+                limit = Some(field.text().await?.parse()?);
+            }
+        }
+
+    }
+
+
+    let bb = file.ok_or(AppError::NotFound)?;
     let service: OlAiService = context.container.resolve().await?;
-    let r = service.search_face(img).await?;
+    let r = service.search_face(radius,limit, bb.iter().as_slice() ).await?;
     Ok(R::ok(r))
 }
 
