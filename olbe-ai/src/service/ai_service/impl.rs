@@ -43,17 +43,20 @@ impl AiService for AiServiceImpl {
     async fn search_face(&self, radius: Option<f32>, limit: Option<u32>, face_img_byte: &[u8]) -> Result<Vec<UserFaceFind>> {
         let face_img = image::load_from_memory(face_img_byte)?;
         let face_boxes = self.ai_session.get_face_boxes(&face_img)?;
+        if face_boxes.len() !=1{
+            return Err(anyhow::Error::msg("Need only one face in picture!"));
+        }
 
         let mut face_img = self.ai_session.get_face_img(&face_img, &face_boxes);
 
-        let r = face_img.pop().unwrap();
+        let r = face_img.pop().ok_or(anyhow::Error::msg("None Face In Picture"))?;
 
         let feature = self.ai_session.get_face_feature(&r)?;
         let feature: Vec<_> = feature.iter().map(|o| *o).collect();
 
         let mut search_opt = SearchOptions::default()
 
-            .metric_type(MetricType::IP)
+            .metric_type(MetricType::COSINE)
             .output_fields(vec![String::from("user_id"), String::from("id")]);
 
         if let Some(limit) = limit {
@@ -101,9 +104,17 @@ impl AiService for AiServiceImpl {
         Ok(users)
     }
 
-    async fn register_face(&self, user_id: i64, face_img: DynamicImage) -> Result<bool> {
-        let face_boxes = self.ai_session.get_face_boxes(&face_img)?;
+    async fn register_face(&self, user_id: i64, face_img: &[u8]) -> Result<bool> {
+        let r = self.search_face(Some(0.8), Some(2), face_img).await?;
+        if r.len() > 0 {
+            return Ok(true);
+        }
 
+        let face_img = image::load_from_memory(face_img)?;
+        let face_boxes = self.ai_session.get_face_boxes(&face_img)?;
+        if face_boxes.len() !=1{
+            return Err(anyhow::Error::msg("Need only one face in picture!"));
+        }
         let mut face_img = self.ai_session.get_face_img(&face_img, &face_boxes);
 
         let r = face_img.pop().unwrap();

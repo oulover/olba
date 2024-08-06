@@ -18,6 +18,15 @@ message SearchFaceReply {
     repeated FaceResult results = 1;
 }
 
+message RegisterFaceRequest {
+    int64 user_id = 1;
+    bytes feature = 2;
+}
+message RegisterFaceReply {
+    bool result = 1;
+}
+
 service AiFace {
     rpc Search (SearchFaceRequest) returns (SearchFaceReply) {}
+    rpc Register (RegisterFaceRequest) returns (RegisterFaceReply) {}
 }

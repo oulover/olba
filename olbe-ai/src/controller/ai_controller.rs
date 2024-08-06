@@ -41,7 +41,7 @@ pub async fn search(Extension(context): Extension<Arc<AppContext>>, mut multipar
 
     let bb = file.ok_or(AppError::ErrParam{msg:"file cannot be empty!".to_string()})?;
     let service: OlAiService = context.container.resolve().await?;
-    let r = service.search_face(radius,limit, bb.iter().as_slice() ).await?;
+    let r = service.search_face(radius,limit, bb.as_ref() ).await?;
     Ok(R::ok(r))
 }
 
@@ -61,10 +61,8 @@ pub async fn upload(Extension(context): Extension<Arc<AppContext>>, mut multipar
     if let Some(uid) = uid {
         if let Some(img) = img {
             let uid: i64 = i64::from_str(&uid)?;
-            let bytes = img.to_vec();
-            let img = image::load_from_memory(&bytes)?;
             let service: OlAiService = context.container.resolve().await?;
-            Ok(R::ok(service.register_face(uid, img).await?))
+            Ok(R::ok(service.register_face(uid, img.as_ref()).await?))
         } else {
             Err(anyhow::Error::msg("123").into())
         }

@@ -43,7 +43,7 @@ opencv = { version = "0"}
 lazy_static = "1.5.0"
 rayon = "1"
 bincode = "1"
-milvus-sdk-rust = {git = "https://github.com/oulover/milvus-sdk-rust",branch = "main"}
+milvus-sdk-rust = {git = "https://github.com/oulover/milvus-sdk-rust",branch = "master"}
 rand = "0.8.5"
 chrono = "0.4.38"
 async-di = "0.1.0"

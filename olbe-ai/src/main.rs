@@ -21,7 +21,7 @@ async fn main() -> Result<()> {
     let index_params = IndexParams::new(
         "feature_index".to_owned(),
         IndexType::IvfFlat,
-        milvus::index::MetricType::IP,
+        milvus::index::MetricType::COSINE,
         HashMap::from([("nlist".to_owned(), "32".to_owned())]),
     );
     client
