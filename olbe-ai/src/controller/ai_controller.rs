@@ -39,7 +39,7 @@ pub async fn search(Extension(context): Extension<Arc<AppContext>>, mut multipar
     }
 
 
-    let bb = file.ok_or(AppError::NotFound)?;
+    let bb = file.ok_or(AppError::ErrParam{msg:"file cannot be empty!".to_string()})?;
     let service: OlAiService = context.container.resolve().await?;
     let r = service.search_face(radius,limit, bb.iter().as_slice() ).await?;
     Ok(R::ok(r))

@@ -11,6 +11,7 @@ pub enum AppError {
     NotFound,
     InnerError,
     ErrorMsg { msg: String },
+    ErrParam { msg: String },
 }
 
 
@@ -21,6 +22,7 @@ impl Display for AppError {
             AppError::NotFound => { String::from("NotFound") }
             AppError::InnerError => { String::from("InnerError") }
             AppError::ErrorMsg { msg } => { String::from("ErrorMsg :") + msg }
+            AppError::ErrParam { msg } => { String::from("ErrParam :") + msg }
         };
         write!(f, "{}", str)
     }

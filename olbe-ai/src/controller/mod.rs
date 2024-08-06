@@ -5,12 +5,10 @@ use axum::response::{IntoResponse, Response};
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use crate::error::AppError;
 
-
-mod web_demo_service;
 mod ai_controller;
 
 pub(crate) fn router() -> Router {
-    Router::new().nest("/user", web_demo_service::router()).nest("/face", ai_controller::router())
+    Router::new().nest("/face", ai_controller::router())
 }
 
 impl IntoResponse for AppError {
@@ -58,13 +56,14 @@ pub struct R<T> {
     pub msg: Option<String>,
     pub data: Option<T>,
 }
-impl <T> From<AppError> for R<T>{
+impl<T> From<AppError> for R<T> {
     fn from(value: AppError) -> Self {
-       match value {
-           AppError::NotFound => {Self::new(Code::Err400,None,Some(AppError::NotFound.to_string()))}
-           AppError::InnerError => {Self::new(Code::Err500,None,Some(AppError::InnerError.to_string()))}
-           AppError::ErrorMsg { msg } =>  {Self::new(Code::Err500,None,Some(msg))}
-       }
+        match value {
+            AppError::NotFound => { Self::new(Code::Err400, None, Some(AppError::NotFound.to_string())) }
+            AppError::InnerError => { Self::new(Code::Err500, None, Some(AppError::InnerError.to_string())) }
+            AppError::ErrorMsg { msg } => { Self::new(Code::Err500, None, Some(msg)) }
+            AppError::ErrParam { msg } => { Self::new(Code::Err400, None, Some(msg)) }
+        }
     }
 }
 
@@ -92,7 +91,7 @@ impl<T> R<T> {
     pub fn ok_opt(data: Option<T>) -> R<T> {
         Self::ok_msg(data, None)
     }
-    pub fn ok(data:T) -> R<T> {
+    pub fn ok(data: T) -> R<T> {
         Self::ok_opt(Some(data))
     }
 

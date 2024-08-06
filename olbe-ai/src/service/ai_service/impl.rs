@@ -101,7 +101,7 @@ impl AiService for AiServiceImpl {
         Ok(users)
     }
 
-    async fn register_face(&self, user_id: i64, face_img: DynamicImage) -> anyhow::Result<bool> {
+    async fn register_face(&self, user_id: i64, face_img: DynamicImage) -> Result<bool> {
         let face_boxes = self.ai_session.get_face_boxes(&face_img)?;
 
         let mut face_img = self.ai_session.get_face_img(&face_img, &face_boxes);
