@@ -52,7 +52,7 @@ fn main() {
       }
     })
     .collect();
-  let mut builder = tonic_build::configure();
+  let mut builder = tonic_build::configure().protoc_arg("--experimental_allow_proto3_optional");
 
   builder = builder.build_client(false).build_server(false);
 
