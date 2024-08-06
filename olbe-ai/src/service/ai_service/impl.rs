@@ -1,16 +1,11 @@
 use std::borrow::Cow;
 use std::collections::HashMap;
-use std::fmt::{Debug, Formatter};
+use std::fmt::Debug;
 use std::marker::PhantomData;
-use std::sync::{Arc, Once};
+use std::sync::Arc;
 use async_di::{Provider, ProvideResult, ResolverRef};
-use axum::extract::Multipart;
-use ort::CUDAExecutionProvider;
 use anyhow::Result;
-use axum::async_trait;
 use image::DynamicImage;
-use milvus::client::Client;
-use milvus::data::FieldColumn;
 use milvus::index::MetricType;
 use milvus::mutate::InsertOptions;
 use milvus::query::SearchOptions;
@@ -55,13 +50,15 @@ impl AiService for AiServiceImpl {
         let feature = self.ai_session.get_face_feature(&r)?;
         let feature: Vec<_> = feature.iter().map(|o| *o).collect();
 
-        let sea_p = SearchOptions::default().metric_type(MetricType::IP).output_fields(vec![String::from("user_id"), String::from("id")]);
-        ;
+        let sea_p = SearchOptions::default().metric_type(MetricType::IP)
+            .output_fields(vec![String::from("user_id"), String::from("id")]);
 
-        let search = self.milvus_client.search(UserFaceFeature::schema()?.name(), vec![Value::FloatArray(Cow::from(feature))], "feature", &sea_p).await?;
+        let search = self.milvus_client.search(UserFaceFeature::schema()?.name(),
+                                               vec![Value::FloatArray(Cow::from(feature))],
+                                               "feature", &sea_p).await?;
 
         let mut users = vec![];
-        for mut s in search {
+        for s in search {
             let t = s.field.into_iter().fold(HashMap::new(), |mut acc, field| {
                 acc.entry(field.name.clone()).or_insert(field);
                 acc
@@ -107,7 +104,7 @@ impl AiService for AiServiceImpl {
         let t = UserFaceFeature::insert_data(UserFaceFeature {
             id: chrono::Utc::now().timestamp(),
             feature: feature.clone(),
-            user_id: chrono::Utc::now().timestamp(),
+            user_id,
         });
 
         self.milvus_client.insert(UserFaceFeature::schema()?.name(), t.clone(), Some(InsertOptions::default())).await?;

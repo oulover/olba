@@ -3,7 +3,7 @@ use milvus::client::Client;
 use milvus::data::FieldColumn;
 use milvus::schema::{CollectionSchema, CollectionSchemaBuilder, FieldSchema};
 use anyhow::Result;
-use async_di::{async_trait, Provider, ProvideResult, ResolverRef};
+use async_di::{Provider, ProvideResult, ResolverRef};
 
 pub type MilvusClient = std::sync::Arc<Client>;
 

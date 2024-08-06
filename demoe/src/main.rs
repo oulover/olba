@@ -1,12 +1,9 @@
+
 mod log_config;
 mod route;
 mod user_dao;
 
-use axum::{middleware, Router};
-use axum::routing::get;
-use fast_log::Config;
-use tower_http::cors::{Any, CorsLayer};
-use chrono::{DateTime, ParseError, Utc};
+use chrono::{DateTime, Utc};
 async fn root() -> &'static str {
     "Hello, World!"
 }

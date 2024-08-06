@@ -4,15 +4,13 @@ pub mod nms;
 pub mod face_det;
 
 // use crate::nms;
-use std::iter::Zip;
 use std::path::Path;
 
-use image::{GenericImageView, imageops::FilterType, RgbImage};
-use ndarray::{Array, ArrayBase, Axis, s};
+use image::{GenericImageView, RgbImage};
+use ndarray::{Array, Axis};
 use ort::{CUDAExecutionProvider, inputs, Session, SessionOutputs};
 use raqote::{DrawOptions, DrawTarget, LineJoin, PathBuilder, SolidSource, Source, StrokeStyle};
 use show_image::{event, ImageInfo, ImageView, PixelFormat, WindowOptions};
-use tracing_subscriber::filter::FilterExt;
 
 #[derive(Debug, Clone, Copy)]
 struct BoundingBox {
@@ -410,7 +408,7 @@ fn main22() -> ort::Result<()> {
         o.0.x1, o.0.y1, o.0.x2, o.0.y2, o.2, 1usize,
     )).collect(), 0.5);
 
-    let mut result: Vec<_> = t_r.into_iter().map(|o| {
+    let result: Vec<_> = t_r.into_iter().map(|o| {
         (
             BoundingBox {
                 x1: o.x1,

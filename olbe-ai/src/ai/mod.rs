@@ -1,17 +1,14 @@
-use std::marker::PhantomData;
-use std::mem::MaybeUninit;
-use std::sync::{Arc, Mutex, Once};
-use std::time::Instant;
-use ::milvus::client::Client;
-use ort::{CUDAExecutionProvider, inputs, Session, SessionOutputs};
-use lazy_static::lazy_static;
+
+use std::sync::Arc;
+
 use anyhow::Result;
-use async_di::{ Provider, ProvideResult, ResolverRef};
+use async_di::{Provider, ProvideResult, ResolverRef};
 use image::{DynamicImage, RgbImage};
-use ndarray::{Array, Array1, Axis, Dim, IxDynImpl, s};
-use raqote::{DrawOptions, DrawTarget, LineJoin, PathBuilder, SolidSource, Source, StrokeStyle};
-use show_image::{event, ImageInfo, ImageView, PixelFormat, WindowOptions};
-use rayon::prelude::*;
+use lazy_static::lazy_static;
+use ndarray::{Array, Array1, Axis, Dim, IxDynImpl};
+use ort::{inputs, Session, SessionOutputs};
+
+
 mod nms;
 pub mod milvus;
 
@@ -20,20 +17,17 @@ pub type OlAiSession = std::sync::Arc<AiSession>;
 pub struct AiProvider;
 
 #[async_trait::async_trait]
-impl Provider for AiProvider{
+impl Provider for AiProvider {
     type Ref = OlAiSession;
 
     async fn provide(&self, resolver: &ResolverRef) -> ProvideResult<Self::Ref> {
-         Ok(AiSession::get_instance()?)
+        Ok(AiSession::get_instance()?)
     }
 }
 
 
-
-
 const DET_10G_URL: &str = "D:\\temp\\aaa\\buffalo_l\\det_10g.onnx";
 const DET_R50G_URL: &str = "D:\\temp\\aaa\\buffalo_l\\w600k_r50.onnx";
-
 
 
 struct ModInfo {
@@ -78,7 +72,7 @@ fn cosine_similarity(a: &Array1<f32>, b: &Array1<f32>) -> f32 {
 }
 
 fn convert_to_array1(arr: &Array<f32, Dim<IxDynImpl>>) -> Result<Array1<f32>> {
-    use ndarray::IxDyn;
+
     // 创建一个动态维度的数组，但这里是一维的
     // let arr_dyn = ArrayD::<f32>::from_shape_vec(Dim(IxDynImpl), vec![1.0, 2.0, 3.0]).unwrap();
 
@@ -146,7 +140,7 @@ impl AiSession {
         let mut new_image = RgbImage::new(input_width, input_height);
 
         // 将缩放后的图像复制到新图像的左上角
-        let roi = image::imageops::overlay(&mut new_image, &original_img.to_rgb8(), 0, 0);
+        image::imageops::overlay(&mut new_image, &original_img.to_rgb8(), 0, 0);
 
         // 将图像数据转换为ndarray
         let mut input = Array::zeros((1, 3, 112, 112));
@@ -190,7 +184,7 @@ impl AiSession {
             new_width = (new_height as f32 / im_ratio) as u32;
         }
 
-        let det_scale = new_height as f32 /img_height as f32;
+        let det_scale = new_height as f32 / img_height as f32;
 
 
         let original_img = param_img.resize_exact(new_width, new_height, image::imageops::FilterType::Nearest);
@@ -199,7 +193,7 @@ impl AiSession {
         let mut new_image = RgbImage::new(input_width, input_height);
 
         // 将缩放后的图像复制到新图像的左上角
-       image::imageops::overlay(&mut new_image, &original_img.to_rgb8(), 0, 0);
+        image::imageops::overlay(&mut new_image, &original_img.to_rgb8(), 0, 0);
 
         // 将图像数据转换为ndarray
         let mut input = Array::zeros((1, 3, 640, 640));
@@ -217,22 +211,20 @@ impl AiSession {
         let outputs = self.det_mod.run(inputs!["input.1" => input.view()]?)?;
 
 
-
         let mut boxes_result = Vec::new();
 
-        for modInfo in ModInfo::get_insight() {
+        for mod_info in ModInfo::get_insight() {
             {
-                let stride = modInfo.stride;
-                let scores_471 = outputs[modInfo.scores].try_extract_tensor::<f32>()?.to_owned();
-                let bbox_preds_474 = outputs[modInfo.boxes].try_extract_tensor::<f32>()?.to_owned();
+                let stride = mod_info.stride;
+                let scores_471 = outputs[mod_info.scores].try_extract_tensor::<f32>()?.to_owned();
+                let bbox_preds_474 = outputs[mod_info.boxes].try_extract_tensor::<f32>()?.to_owned();
                 let bbox_preds_474 = bbox_preds_474 * (stride as f32);
                 let size: usize = 640 / stride;
 
 
+                let mut input_boxes = Array::zeros(((size * size * 2) as _, 2));
 
-                let mut input_boxes = Array::zeros(((size * size *2) as _, 2));
-
-                for i in 0..((size * size) ) {
+                for i in 0..((size * size)) {
                     let index = i * 2;
                     input_boxes[[index, 0]] = ((i * stride) % 640) as f32;
                     input_boxes[[index + 1, 0]] = ((i * stride) % 640) as f32;
@@ -244,7 +236,6 @@ impl AiSession {
                 let points = input_boxes;
                 let distance = bbox_preds_474.clone();
                 let bbox_preds_474_temp_box = {
-
                     let n = points.len_of(Axis(0));
 
                     // 初始化输出数组
@@ -277,7 +268,7 @@ impl AiSession {
 
                 let pos_scores = scores_471.select(Axis(0), &pos_index[..]);
                 let pos_bboxes = bbox_preds_474_temp_box.select(Axis(0), &pos_index[..]);
-                let pos_bboxes = pos_bboxes /det_scale;
+                let pos_bboxes = pos_bboxes / det_scale;
 
                 pos_scores.axis_iter(Axis(0)).zip(pos_bboxes.axis_iter(Axis(0))).for_each(|(so, bo)| {
                     boxes_result.push(
@@ -291,7 +282,6 @@ impl AiSession {
                     )
                 });
             }
-
         }
         let t_r = nms::nms(boxes_result, 0.5);
         Ok(t_r)
@@ -299,16 +289,9 @@ impl AiSession {
 }
 
 impl AiSession {
-      fn new() -> Result<Arc<AiSession>> {
+    fn new() -> Result<Arc<AiSession>> {
         let det = Session::builder()?.commit_from_file(DET_10G_URL)?;
         let feature = Session::builder()?.commit_from_file(DET_R50G_URL)?;
-
-          pub fn init()->Result<()>{
-              ort::init()
-                  .with_execution_providers([CUDAExecutionProvider::default().build()])
-                  .commit()?;
-              Ok(())
-          }
 
 
         Ok(Arc::new(AiSession {
@@ -317,7 +300,6 @@ impl AiSession {
 
         }))
     }
-
 
 
     pub fn get_instance() -> Result<Arc<AiSession>> {

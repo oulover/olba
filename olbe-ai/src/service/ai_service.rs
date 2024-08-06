@@ -1,7 +1,5 @@
 use std::fmt::Debug;
 use anyhow::Result;
-use async_di::async_trait;
-use axum::extract::Multipart;
 use image::DynamicImage;
 use serde::{Deserialize, Serialize};
 
