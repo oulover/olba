@@ -10,8 +10,8 @@ use milvus::index::MetricType;
 use milvus::mutate::InsertOptions;
 use milvus::query::SearchOptions;
 use milvus::value::{Value, ValueVec};
-use crate::ai::AiSession;
-use crate::ai::milvus::{MilvusClient, UserFaceFeature};
+use crate::service::ai_service::ai::AiSession;
+use crate::service::ai_service::ai::milvus::{MilvusClient, UserFaceFeature};
 use crate::service::ai_service::{AiService, OlAiService, UserFaceFind};
 
 pub struct AiServiceProvider;

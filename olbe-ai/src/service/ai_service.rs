@@ -4,6 +4,7 @@ use image::DynamicImage;
 use serde::{Deserialize, Serialize};
 
 pub mod r#impl;
+pub mod ai;
 
 pub type OlAiService = std::sync::Arc<dyn AiService>;
 

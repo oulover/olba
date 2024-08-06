@@ -3,7 +3,6 @@ pub mod service;
 pub mod config;
 pub mod middleware;
 pub mod error;
-pub mod ai;
 pub mod router;
 pub mod controller;
 mod domain;
@@ -13,8 +12,8 @@ mod grpc;
 use std::sync::Arc;
 use anyhow::Result;
 use async_di::Container;
-use crate::ai::AiProvider;
-use crate::ai::milvus::MilvusClientProvider;
+use service::ai_service::ai::AiProvider;
+use service::ai_service::ai::milvus::MilvusClientProvider;
 
 pub struct AppContext {
     container: Container,
